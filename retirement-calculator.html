@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Retirement Calculator</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f2;color:#1a1a18;font-size:14px;line-height:1.5}
+h1{font-size:18px;font-weight:600}
+h3{font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px}
+label{font-size:12px;color:#555;display:block;margin-bottom:3px}
+input[type=number],input[type=text]{width:100%;padding:6px 9px;border:1px solid #d0cfc7;border-radius:6px;font-size:13px;background:#fff;color:#1a1a18;outline:none}
+input[type=number]:focus,input[type=text]:focus{border-color:#888}
+input[type=number]::placeholder{color:#bbb}
+button{padding:7px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #d0cfc7;background:#fff;color:#333;transition:background .15s}
+button:hover{background:#ededea}
+button.primary{background:#1a1a18;color:#fff;border-color:#1a1a18}
+button.primary:hover{background:#333}
+button.danger{color:#c0392b;border-color:#e8c4c0}
+button.danger:hover{background:#fff0ee}
+button.small{padding:4px 10px;font-size:11px}
+.layout{display:grid;grid-template-columns:310px 1fr;min-height:calc(100vh - 92px)}
+.sidebar{background:#fff;border-right:1px solid #e0dfd8;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.main{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+.card{background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:14px}
+.field{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
+.field:last-child{margin-bottom:0}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.header{padding:12px 16px;background:#fff;border-bottom:1px solid #e0dfd8;display:flex;align-items:center;gap:10px}
+.spacer{flex:1}
+.sbar{padding:8px 16px;background:#fff;border-bottom:1px solid #e0dfd8;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.stag{padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;background:#e8e7e0;color:#444;cursor:pointer;border:none}
+.stag.active{background:#1a1a18;color:#fff}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.metric{background:#f5f5f2;border-radius:8px;padding:12px}
+.metric .lbl{font-size:11px;color:#777;margin-bottom:4px}
+.metric .val{font-size:20px;font-weight:600}
+.metric.good .val{color:#1a7a4a}
+.metric.bad .val{color:#c0392b}
+.metric.na .val{color:#aaa;font-size:16px}
+.tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid #e0dfd8}
+.tab{padding:7px 14px;border-radius:6px 6px 0 0;font-size:12px;font-weight:500;cursor:pointer;border:none;background:none;color:#666}
+.tab.active{background:#fff;color:#1a1a18;border:1px solid #e0dfd8;border-bottom:1px solid #fff;margin-bottom:-1px}
+canvas{display:block}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.li{display:flex;align-items:center;gap:5px;font-size:11px;color:#555}
+.ls{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:right;padding:4px 8px;font-weight:500;color:#666;border-bottom:1px solid #e0dfd8;white-space:nowrap}
+td{text-align:right;padding:3px 8px;border-bottom:1px solid #f0efe8}
+tr.deficit td{background:#fff8f8}
+tr:hover td{background:#f8f8f5}
+.gp{color:#1a7a4a;font-weight:600}
+.gn{color:#c0392b;font-weight:600}
+.mu{color:#bbb}
+.hint{font-size:11px;color:#aaa;padding:32px 0;text-align:center}
+.footer{font-size:11px;color:#aaa;text-align:center;padding:8px 0}
+@media(max-width:700px){.layout{grid-template-columns:1fr}.metric-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Retirement Calculator</h1>
+  <div class="spacer"></div>
+  <button onclick="exportS()">Export JSON</button>
+  <button onclick="document.getElementById('fi').click()">Import JSON</button>
+  <input type="file" id="fi" accept=".json" style="display:none" onchange="importS(this)">
+</div>
+<div class="sbar">
+  <span style="font-size:11px;color:#888">Scenarios:</span>
+  <div id="stags"></div>
+  <button class="small" onclick="addS()">+ Copy</button>
+  <button class="small danger" onclick="removeS()">Remove</button>
+  <div class="spacer"></div>
+  <label style="display:inline;margin:0 6px 0 0;font-size:12px;color:#666">Name:</label>
+  <input type="text" id="sname" style="width:160px;font-size:12px;padding:4px 8px" oninput="renameS(this.value)">
+</div>
+<div class="layout">
+  <div class="sidebar" id="sidebar"></div>
+  <div class="main" id="main"></div>
+</div>
+
+<script>
+const THIS_YEAR = new Date().getFullYear();
+
+const C={hWork:'#378ADD',wWork:'#85B7EB',h401:'#1D9E75',w401:'#5DCAA5',hSS:'#EF9F27',wSS:'#FAC775',exp:'#E24B4A'};
+const getSER=()=>{
+  const h=sc().hName||'Person 1', w=sc().wName||'Person 2';
+  return[
+    {k:'hWork',l:h+' work',c:C.hWork},{k:'wWork',l:w+' work',c:C.wWork},
+    {k:'h401',l:h+' 401k',c:C.h401},{k:'w401',l:w+' 401k',c:C.w401},
+    {k:'hSS',l:h+' SS',c:C.hSS},{k:'wSS',l:w+' SS',c:C.wSS}
+  ];
+};
+function updateLegend(){
+  const leg=document.getElementById('leg');
+  if(!leg)return;
+  leg.innerHTML=getSER().map(s=>`<div class="li"><div class="ls" style="background:${s.c}"></div>${s.l}</div>`).join('')+
+    `<div class="li"><div class="ls" style="background:${C.exp}"></div>Expenses</div>`;
+}
+
+function defS(n='Scenario 1'){
+  return{name:n,
+    hName:'', wName:'',
+    // Personal fields — intentionally blank (null = not entered)
+    hCur:null, hRet:null, hSSA:null, hSSB:null, hInc:null,
+    h401e:null, h401f:null,
+    wCur:null, wRet:null, wSSA:null, wSSB:null, wInc:null,
+    w401e:null, w401f:null,
+    // Assumption fields — sensible defaults
+    exp:10000, wdr:5, inf:2.5, yrs:35, inflWork:true, infl401k:false
+  };
+}
+
+let SS=[defS()], AI=0, TAB='cashflow';
+const sc=()=>SS[AI];
+const v=k=>sc()[k]||0;  // treat null as 0 for math
+
+function isReady(s){
+  // need at least one person's ages to draw a chart
+  return (s.hCur>0 && s.hRet>0) || (s.wCur>0 && s.wRet>0);
+}
+
+function proj(s){
+  const rows=[], ir=(s.inf||0)/100, wr=(s.wdr||5)/100;
+  for(let y=0;y<=s.yrs;y++){
+    const calYear = THIS_YEAR + y;
+    const ha = (s.hCur||0) + y;
+    const wa = (s.wCur||0) + y;
+    const im = Math.pow(1+ir, y);
+    const ex = (s.exp||0) * im;
+
+    // Work income: requires age + retire age + income entered, and not yet retired
+    const hw = (s.hCur && s.hRet && s.hInc && ha < s.hRet) ? s.hInc * (s.inflWork ? im : 1) : 0;
+    const ww = (s.wCur && s.wRet && s.wInc && wa < s.wRet) ? s.wInc * (s.inflWork ? im : 1) : 0;
+
+    // 401k: requires age + retire age + early balance entered, and retired
+    // before 59.5 uses early balance, at/after 59.5 steps up to full balance (if entered)
+    const hb = ha < 59.5 ? (s.h401e||0) : (s.h401f||s.h401e||0);
+    const h4 = (s.hCur && s.hRet && s.h401e && ha >= s.hRet) ? (hb * wr) / 12 * (s.infl401k ? im : 1) : 0;
+    const wb = wa < 59.5 ? (s.w401e||0) : (s.w401f||s.w401e||0);
+    const w4 = (s.wCur && s.wRet && s.w401e && wa >= s.wRet) ? (wb * wr) / 12 * (s.infl401k ? im : 1) : 0;
+
+    // Social Security: requires age + SS claim age + benefit entered, and at/past claim age
+    const hs = (s.hCur && s.hSSA && s.hSSB && ha >= s.hSSA) ? s.hSSB * im : 0;
+    const ws = (s.wCur && s.wSSA && s.wSSB && wa >= s.wSSA) ? s.wSSB * im : 0;
+
+    const inc = hw + ww + h4 + w4 + hs + ws;
+    rows.push({y, calYear, ha, wa,
+      hWork:Math.round(hw), wWork:Math.round(ww),
+      h401:Math.round(h4),  w401:Math.round(w4),
+      hSS:Math.round(hs),   wSS:Math.round(ws),
+      inc:Math.round(inc),  ex:Math.round(ex), gap:Math.round(inc-ex)});
+  }
+  return rows;
+}
+
+const fK=n=>{const a=Math.abs(Math.round(n));return(n<0?'-':'')+(a>=1000?'$'+Math.round(a/1000)+'k':'$'+a)};
+const fD=n=>(n>=0?'+':'')+fK(n);
+
+// ---- Canvas charts ----
+function drawBar(cv,data){
+  const dpr=window.devicePixelRatio||1;
+  const W=cv.offsetWidth, H=300;
+  cv.width=W*dpr; cv.height=H*dpr; cv.style.height=H+'px';
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  const p={t:12,r:12,b:48,l:58}, cw=W-p.l-p.r, ch=H-p.t-p.b;
+  const mx=Math.max(...data.map(d=>d.inc),...data.map(d=>d.ex))*1.12||1;
+  const yS=v=>p.t+ch-(v/mx)*ch;
+
+  ctx.strokeStyle='#e8e7e0'; ctx.lineWidth=0.5;
+  for(let i=0;i<=4;i++){
+    const y=p.t+(ch/4)*i;
+    ctx.beginPath(); ctx.moveTo(p.l,y); ctx.lineTo(p.l+cw,y); ctx.stroke();
+    ctx.fillStyle='#999'; ctx.font='10px system-ui'; ctx.textAlign='right';
+    ctx.fillText(fK(mx*(1-i/4)), p.l-4, y+4);
+  }
+
+  const bw=Math.max(2,(cw/data.length)-1.5);
+  const bx=i=>p.l+(i/data.length)*cw+(cw/data.length-bw)/2;
+
+  data.forEach((d,i)=>{
+    const x=bx(i); let yb=p.t+ch;
+    getSER().forEach(s=>{const vv=d[s.k];if(!vv)return;const h=(vv/mx)*ch;ctx.fillStyle=s.c;ctx.fillRect(x,yb-h,bw,h);yb-=h;});
+  });
+
+  ctx.strokeStyle=C.exp; ctx.lineWidth=2;
+  ctx.beginPath();
+  data.forEach((d,i)=>{const x=bx(i)+bw/2,y=yS(d.ex);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.stroke();
+
+  // x-axis: calendar year on top row, ages on bottom row, every 5 years
+  ctx.fillStyle='#555'; ctx.font='10px system-ui'; ctx.textAlign='center';
+  data.forEach((d,i)=>{
+    if(d.y%5===0){
+      ctx.fillStyle='#444'; ctx.font='500 10px system-ui';
+      ctx.fillText(d.calYear, bx(i)+bw/2, p.t+ch+16);
+      ctx.fillStyle='#999'; ctx.font='10px system-ui';
+      const ages = [d.ha>0?d.ha:null, d.wa>0?d.wa:null].filter(Boolean).join('/');
+      if(ages) ctx.fillText(ages, bx(i)+bw/2, p.t+ch+30);
+    }
+  });
+}
+
+function drawGap(cv,data){
+  const dpr=window.devicePixelRatio||1;
+  const W=cv.offsetWidth, H=280;
+  cv.width=W*dpr; cv.height=H*dpr; cv.style.height=H+'px';
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  const p={t:12,r:12,b:48,l:64}, cw=W-p.l-p.r, ch=H-p.t-p.b;
+  const mx=Math.max(...data.map(d=>Math.abs(d.gap)))*1.15||1;
+  const ym=p.t+ch/2;
+
+  ctx.strokeStyle='#e8e7e0'; ctx.lineWidth=0.5;
+  [-1,-0.5,0,0.5,1].forEach(t=>{
+    const y=ym-t*(ch/2);
+    ctx.beginPath(); ctx.moveTo(p.l,y); ctx.lineTo(p.l+cw,y); ctx.stroke();
+    ctx.fillStyle='#999'; ctx.font='10px system-ui'; ctx.textAlign='right';
+    ctx.fillText(fK(t*mx), p.l-4, y+4);
+  });
+  ctx.strokeStyle='#bbb'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(p.l,ym); ctx.lineTo(p.l+cw,ym); ctx.stroke();
+
+  const bw=Math.max(2,(cw/data.length)-1.5);
+  const bx=i=>p.l+(i/data.length)*cw+(cw/data.length-bw)/2;
+  data.forEach((d,i)=>{
+    const x=bx(i), frac=(Math.abs(d.gap)/mx)*(ch/2);
+    if(d.gap>=0){ctx.fillStyle='#1D9E75';ctx.fillRect(x,ym-frac,bw,frac);}
+    else{ctx.fillStyle='#E24B4A';ctx.fillRect(x,ym,bw,frac);}
+  });
+
+  ctx.fillStyle='#444'; ctx.font='500 10px system-ui'; ctx.textAlign='center';
+  data.forEach((d,i)=>{
+    if(d.y%5===0){
+      ctx.fillText(d.calYear, bx(i)+bw/2, p.t+ch+16);
+      ctx.fillStyle='#999'; ctx.font='10px system-ui';
+      const ages=[d.ha>0?d.ha:null, d.wa>0?d.wa:null].filter(Boolean).join('/');
+      if(ages) ctx.fillText(ages, bx(i)+bw/2, p.t+ch+30);
+      ctx.fillStyle='#444'; ctx.font='500 10px system-ui';
+    }
+  });
+}
+
+// ---- Field builder ----
+// uses empty string for null values so placeholder shows
+function F(lbl,key,opts={}){
+  const{min=0,max=999999,pre='',suf='',ph=''}=opts;
+  const id='f_'+key, cur=sc()[key];
+  const val=(cur===null||cur===undefined)?'':cur;
+  return`<div class="field"><label for="${id}">${lbl}</label>
+    <div style="position:relative;display:flex;align-items:center">
+      ${pre?`<span style="position:absolute;left:8px;font-size:12px;color:#bbb;pointer-events:none">${pre}</span>`:''}
+      <input type="number" id="${id}" value="${val}" min="${min}" max="${max}"
+        placeholder="${ph}"
+        style="padding-left:${pre?'22px':'9px'};padding-right:${suf?'28px':'9px'}"
+        oninput="upd('${key}',this.value===''?null:+this.value)"/>
+      ${suf?`<span style="position:absolute;right:8px;font-size:12px;color:#bbb;pointer-events:none">${suf}</span>`:''}
+    </div></div>`;
+}
+
+function renderSidebar(){
+  document.getElementById('sidebar').innerHTML=`
+    <div class="card">
+      <input type="text" value="${sc().hName||'Person 1'}" placeholder="Person 1 name"
+        style="font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;border:none;border-bottom:1px solid transparent;border-radius:0;padding:0;background:transparent;width:100%;outline:none"
+        onfocus="this.style.borderBottomColor='#d0cfc7'" onblur="this.style.borderBottomColor='transparent'"
+        oninput="upd('hName',this.value);updateLegend()"/>
+      <div class="field-row">${F('Current age','hCur',{min:30,max:80,ph:'e.g. 50'})}${F('Retire at age','hRet',{min:30,max:75,ph:'e.g. 56'})}</div>
+      <div class="field-row">${F('Claim SS at age','hSSA',{min:62,max:70,ph:'62–70'})}${F('SS benefit / mo','hSSB',{pre:'$',ph:'est.'})}</div>
+      ${F('Monthly income (working)','hInc',{pre:'$',ph:'gross'})}
+      ${F('401k balance available at retirement','h401e',{pre:'$',ph:'Rule of 55 or post-59½ amount'})}
+      ${F('All retirement accounts at 59½','h401f',{pre:'$',ph:'401k + IRA + other accounts'})}
+    </div>
+    <div class="card">
+      <input type="text" value="${sc().wName||'Person 2'}" placeholder="Person 2 name"
+        style="font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;border:none;border-bottom:1px solid transparent;border-radius:0;padding:0;background:transparent;width:100%;outline:none"
+        onfocus="this.style.borderBottomColor='#d0cfc7'" onblur="this.style.borderBottomColor='transparent'"
+        oninput="upd('wName',this.value);updateLegend()"/>
+      <div class="field-row">${F('Current age','wCur',{min:30,max:80,ph:'e.g. 56'})}${F('Retire at age','wRet',{min:30,max:75,ph:'e.g. 59'})}</div>
+      <div class="field-row">${F('Claim SS at age','wSSA',{min:62,max:70,ph:'62–70'})}${F('SS benefit / mo','wSSB',{pre:'$',ph:'est.'})}</div>
+      ${F('Monthly income (working)','wInc',{pre:'$',ph:'gross'})}
+      ${F('401k balance available at retirement','w401e',{pre:'$',ph:'Rule of 55 or post-59½ amount'})}
+      ${F('All retirement accounts at 59½','w401f',{pre:'$',ph:'401k + IRA + other accounts'})}
+    </div>
+    <div class="card"><h3>Assumptions</h3>
+      ${F('Monthly expenses','exp',{pre:'$',ph:'10000'})}
+      <div class="field-row">${F('Withdrawal rate','wdr',{min:1,max:10,suf:'%',ph:'5'})}${F('Inflation rate','inf',{min:0,max:10,suf:'%',ph:'2.5'})}</div>
+      ${F('Projection years','yrs',{min:10,max:50,ph:'35'})}
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:7px;border-top:1px solid #f0efe8;padding-top:10px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:#444">
+          <input type="checkbox" ${sc().inflWork?'checked':''} onchange="upd('inflWork',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#1a1a18"/>
+          Inflate work income with CPI
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:#444">
+          <input type="checkbox" ${sc().infl401k?'checked':''} onchange="upd('infl401k',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#1a1a18"/>
+          Inflate 401k withdrawals with CPI
+          <span style="font-size:11px;color:#aaa">(aggressive)</span>
+        </label>
+      </div>
+    </div>
+    <p class="footer">For planning discussions only — not financial advice.</p>`;
+}
+
+function renderMain(){
+  const s=sc();
+  if(!isReady(s)){
+    document.getElementById('main').innerHTML=`
+      <div class="card"><p class="hint">Enter at least one person's current age and retirement age to see projections.</p></div>`;
+    return;
+  }
+  const data=proj(s);
+  const fg=data.find(d=>d.gap>=0&&d.y>0);
+  const tot=data.reduce((a,d)=>a+(d.gap<0?Math.abs(d.gap)*12:0),0);
+  const last=data[data.length-1], d0=data[0];
+
+  document.getElementById('main').innerHTML=`
+    <div class="metric-grid">
+      <div class="metric ${d0.gap>=0?'good':'bad'}">
+        <div class="lbl">Income vs expenses (${THIS_YEAR})</div>
+        <div class="val">${fD(d0.gap)}/mo</div>
+      </div>
+      <div class="metric ${fg?'good':'bad'}">
+        <div class="lbl">Break-even year</div>
+        <div class="val">${fg?fg.calYear:'Not reached'}</div>
+      </div>
+      <div class="metric ${tot>0?'bad':'good'}">
+        <div class="lbl">Total projected shortfall</div>
+        <div class="val">${tot>0?fK(tot):'None'}</div>
+      </div>
+      <div class="metric ${last.gap>=0?'good':'bad'}">
+        <div class="lbl">Gap in ${last.calYear}</div>
+        <div class="val">${fD(last.gap)}/mo</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tabs">
+        <button class="tab ${TAB==='cashflow'?'active':''}" onclick="switchTab('cashflow')">Cash flow</button>
+        <button class="tab ${TAB==='gap'?'active':''}" onclick="switchTab('gap')">Surplus / shortfall</button>
+      </div>
+      <div class="legend" id="leg"></div>
+      <canvas id="cv"></canvas>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px">Year-by-year detail</h3>
+      <div style="overflow-x:auto"><table>
+        <thead><tr>
+          <th style="text-align:left">Year</th>
+          <th>${s.hName||'P1'}.age</th><th>${s.wName||'P2'}.age</th>
+          <th>${s.hName||'P1'}.work</th><th>${s.wName||'P2'}.work</th>
+          <th>${s.hName||'P1'}.401k</th><th>${s.wName||'P2'}.401k</th>
+          <th>${s.hName||'P1'}.SS</th><th>${s.wName||'P2'}.SS</th>
+          <th>Income</th><th>Expenses</th><th>Gap</th>
+        </tr></thead>
+        <tbody>${data.map(d=>`<tr class="${d.gap<0?'deficit':''}">
+          <td style="text-align:left;font-weight:500">${d.calYear}</td>
+          <td class="${!s.hCur?'mu':''}">${s.hCur?d.ha:'—'}</td>
+          <td class="${!s.wCur?'mu':''}">${s.wCur?d.wa:'—'}</td>
+          ${[d.hWork,d.wWork,d.h401,d.w401,d.hSS,d.wSS].map(vv=>`<td class="${vv===0?'mu':''}">${vv===0?'—':fK(vv)}</td>`).join('')}
+          <td><strong>${fK(d.inc)}</strong></td><td>${fK(d.ex)}</td>
+          <td class="${d.gap>=0?'gp':'gn'}">${fD(d.gap)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+
+  requestAnimationFrame(()=>{
+    const cv=document.getElementById('cv'); if(!cv)return;
+    const h=sc().hName||'Person 1', w=sc().wName||'Person 2';
+    if(TAB==='cashflow'){
+      document.getElementById('leg').innerHTML=
+        getSER().map(s=>`<div class="li"><div class="ls" style="background:${s.c}"></div>${s.l}</div>`).join('')+
+        `<div class="li"><div class="ls" style="background:${C.exp}"></div>Expenses</div>`;
+      drawBar(cv,data);
+    }else{
+      document.getElementById('leg').innerHTML=
+        `<div class="li"><div class="ls" style="background:#1D9E75"></div>Surplus</div>
+         <div class="li"><div class="ls" style="background:#E24B4A"></div>Shortfall</div>`;
+      drawGap(cv,data);
+    }
+  });
+}
+
+function renderScenarioBar(){
+  document.getElementById('stags').innerHTML=
+    SS.map((s,i)=>`<button class="stag${i===AI?' active':''}" onclick="selS(${i})">${s.name}</button>`).join('');
+  document.getElementById('sname').value=sc().name;
+}
+
+function render(){renderSidebar();renderMain();renderScenarioBar();}
+function selS(i){AI=i;render();}
+function upd(k,v){SS[AI][k]=v;renderMain();}
+function renameS(n){SS[AI].name=n;renderScenarioBar();}
+function switchTab(t){TAB=t;renderMain();}
+function addS(){const c=JSON.parse(JSON.stringify(sc()));c.name='Scenario '+(SS.length+1);SS.push(c);AI=SS.length-1;render();}
+function removeS(){if(SS.length===1)return;SS.splice(AI,1);AI=Math.max(0,AI-1);render();}
+function exportS(){
+  const b=new Blob([JSON.stringify(SS,null,2)],{type:'application/json'});
+  const u=URL.createObjectURL(b);
+  const a=document.createElement('a');a.href=u;a.download='retirement-scenarios.json';a.click();URL.revokeObjectURL(u);
+}
+function importS(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{try{const d=JSON.parse(e.target.result);if(Array.isArray(d)&&d.length){SS=d;AI=0;render();}}catch{alert('Invalid file');}};
+  r.readAsText(f);input.value='';
+}
+window.addEventListener('resize',()=>{
+  const cv=document.getElementById('cv');
+  if(cv&&isReady(sc())){TAB==='cashflow'?drawBar(cv,proj(sc())):drawGap(cv,proj(sc()));}
+});
+render();
+</script>
+</body>
+</html>
