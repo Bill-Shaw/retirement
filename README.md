@@ -6,9 +6,6 @@ A self-contained retirement income projection tool. No install, no server, no de
 
 Download `retirement-calculator.html` and open it in any modern browser (Chrome, Edge, Firefox, Safari). Nothing else is needed — the file works offline.
 
-Or use the hosted version via GitHub Pages:
-[https://bill-shaw.github.io/retirement/retirement-calculator.html](https://bill-shaw.github.io/retirement/retirement-calculator.html)
-
 ## Features
 
 - **Two-person household** — independent retirement ages, income, Social Security, and 401k fields per person. Names are editable so you can personalize the labels.
