@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retirement Planning Suite</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f2;color:#1a1a18;font-size:14px;line-height:1.5}
+h3{font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px}
+label{font-size:12px;color:#555;display:block;margin-bottom:3px}
+input[type=number],input[type=text],select{width:100%;padding:6px 9px;border:1px solid #d0cfc7;border-radius:6px;font-size:13px;background:#fff;color:#1a1a18;outline:none}
+input[type=number]:focus,input[type=text]:focus,select:focus{border-color:#888}
+input[type=number]::placeholder,input[type=text]::placeholder{color:#bbb}
+button{padding:7px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #d0cfc7;background:#fff;color:#333;transition:background .15s}
+button:hover{background:#ededea}
+button.primary{background:#1a1a18;color:#fff;border-color:#1a1a18}
+button.primary:hover{background:#333}
+button.danger{color:#c0392b;border-color:#e8c4c0}
+button.danger:hover{background:#fff0ee}
+button.small{padding:4px 10px;font-size:11px}
+.spacer{flex:1}
+
+/* App header */
+.app-header{padding:10px 16px;background:#fff;border-bottom:1px solid #e0dfd8;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:200}
+.app-header h1{font-size:16px;font-weight:700}
+
+/* Profile panel */
+.profile-wrap{background:#fff;border-bottom:1px solid #e0dfd8}
+.profile-toggle{display:flex;align-items:center;gap:8px;padding:8px 16px;cursor:pointer;user-select:none;font-size:12px;font-weight:600;color:#444}
+.profile-toggle:hover{background:#fafaf8}
+.profile-arrow{font-size:9px;color:#888;transition:transform .18s;display:inline-block}
+.profile-arrow.open{transform:rotate(90deg)}
+.profile-body{display:none;padding:14px 16px 16px}
+.profile-body.open{display:block}
+.profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.profile-section{background:#f8f8f5;border:1px solid #e8e7e0;border-radius:8px;padding:12px}
+.profile-actions{margin-top:10px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.profile-hint{font-size:11px;color:#aaa;margin-left:auto;align-self:center}
+
+/* Tool tabs */
+.tool-tabs{background:#fff;border-bottom:1px solid #e0dfd8;padding:0 16px;display:flex;align-items:flex-end;gap:0}
+.tool-tab{padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;color:#999;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tool-tab:hover{color:#555}
+.tool-tab.active{color:#1a1a18;border-bottom-color:#1a1a18}
+
+/* Tool panels */
+.tool-panel{display:none}
+.tool-panel.active{display:block}
+
+/* Two-column layout (sidebar + main) */
+.tool-layout{display:grid;grid-template-columns:310px 1fr;min-height:calc(100vh - 108px)}
+.sidebar{background:#fff;border-right:1px solid #e0dfd8;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.main{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+.card{background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:14px}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
+.field:last-child{margin-bottom:0}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* Scenario bar (calculator) */
+.sbar{padding:7px 16px;background:#fff;border-bottom:1px solid #e0dfd8;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.stag{padding:3px 11px;border-radius:12px;font-size:12px;font-weight:500;background:#e8e7e0;color:#444;cursor:pointer;border:none}
+.stag.active{background:#1a1a18;color:#fff}
+
+/* Metrics */
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.metric{background:#f5f5f2;border-radius:8px;padding:12px}
+.metric .lbl{font-size:11px;color:#777;margin-bottom:4px}
+.metric .val{font-size:19px;font-weight:600}
+.metric.good .val{color:#1a7a4a}
+.metric.bad .val{color:#c0392b}
+
+/* Inner tabs */
+.tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid #e0dfd8}
+.tab{padding:6px 13px;border-radius:6px 6px 0 0;font-size:12px;font-weight:500;cursor:pointer;border:none;background:none;color:#666}
+.tab.active{background:#fff;color:#1a1a18;border:1px solid #e0dfd8;border-bottom:1px solid #fff;margin-bottom:-1px}
+
+/* Chart legend */
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.li{display:flex;align-items:center;gap:5px;font-size:11px;color:#555}
+.ls{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:right;padding:4px 8px;font-weight:500;color:#666;border-bottom:1px solid #e0dfd8;white-space:nowrap}
+td{text-align:right;padding:3px 8px;border-bottom:1px solid #f0efe8}
+tr.deficit td{background:#fff8f8}
+tr:hover td{background:#f8f8f5}
+.gp{color:#1a7a4a;font-weight:600}
+.gn{color:#c0392b;font-weight:600}
+.mu{color:#bbb}
+
+/* MC stats */
+.mc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e0dfd8;border:1px solid #e0dfd8;border-radius:10px;overflow:hidden;margin-bottom:18px}
+.mc-stat{background:#fff;padding:14px 16px}
+.mc-stat .s-lab{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:#888;margin-bottom:5px}
+.mc-stat .s-val{font-size:22px;font-weight:700;font-family:ui-monospace,monospace}
+.mc-stat .s-note{font-size:11px;color:#888;margin-top:2px}
+
+/* MC verdict */
+.mc-verdict{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid #e0dfd8}
+.mc-prob{font-size:clamp(44px,8vw,72px);font-weight:700;line-height:.95;font-family:ui-monospace,monospace}
+.mc-prob small{font-size:.4em;font-weight:400;color:#888;margin-left:4px}
+.mc-pill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:12px;font-weight:700;letter-spacing:.04em;border:1px solid;font-family:ui-monospace,monospace}
+.mc-note{font-size:12px;color:#888;border-top:1px solid #e0dfd8;padding-top:12px;margin-top:12px;line-height:1.7}
+.mc-note b{color:#555;font-weight:600}
+.mc-chart-label{font-size:13px;font-weight:600;margin-bottom:3px}
+.mc-chart-sub{font-size:12px;color:#888;margin-bottom:8px}
+
+/* Run button */
+.runbtn{width:100%;margin-top:6px;background:#1a1a18;color:#fff;border:none;border-radius:7px;font-weight:700;font-size:13px;padding:11px;cursor:pointer;transition:background .15s}
+.runbtn:hover{background:#333}
+
+/* Misc */
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:calc(100% - 9px) center;padding-right:26px}
+.hint{font-size:11px;color:#aaa;padding:32px 0;text-align:center}
+.footer{font-size:11px;color:#aaa;text-align:center;padding:8px 0}
+canvas{display:block}
+@media(max-width:720px){.tool-layout{grid-template-columns:1fr}.metric-grid{grid-template-columns:1fr 1fr}.mc-stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- APP HEADER -->
+<div class="app-header">
+  <h1>Retirement Planning Suite</h1>
+  <div class="spacer"></div>
+  <button onclick="exportAll()">Export JSON</button>
+  <button onclick="document.getElementById('import-file').click()">Import JSON</button>
+  <input type="file" id="import-file" accept=".json" style="display:none" onchange="importAll(this)">
+</div>
+
+<!-- SHARED PROFILE -->
+<div class="profile-wrap">
+  <div class="profile-toggle" onclick="toggleProfile()">
+    <span class="profile-arrow" id="profileArrow">▶</span>
+    &nbsp;Shared Profile
+    <span id="profileSummary" style="font-weight:400;color:#888;margin-left:8px;font-size:12px"></span>
+    <span class="profile-hint">Fill once — apply to any tool</span>
+  </div>
+  <div class="profile-body open" id="profileBody">
+    <div class="profile-grid" id="profileGrid"></div>
+    <div class="profile-actions">
+      <button class="small" onclick="applyToCalc()">Apply to Cash Flow →</button>
+      <button class="small primary" onclick="applyToMC()">Apply to Monte Carlo →</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOOL TABS -->
+<div class="tool-tabs">
+  <button class="tool-tab active" id="tab-calc" onclick="switchTool('calc')">Cash Flow Calculator</button>
+  <button class="tool-tab" id="tab-mc" onclick="switchTool('mc')">Monte Carlo Simulator</button>
+  <!-- ADD NEW TOOL TAB HERE and add a matching tool panel + entry in TOOLS array below -->
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TOOL: CASH FLOW CALCULATOR
+     ═══════════════════════════════════════════════════════════ -->
+<div id="tool-calc" class="tool-panel active">
+  <div class="sbar">
+    <span style="font-size:11px;color:#888">Scenarios:</span>
+    <div id="calc-stags"></div>
+    <button class="small" onclick="addScenario()">+ Copy</button>
+    <button class="small danger" onclick="removeScenario()">Remove</button>
+    <div class="spacer"></div>
+    <label style="display:inline;margin:0 6px 0 0;font-size:12px;color:#666">Name:</label>
+    <input type="text" id="calc-sname" style="width:150px;font-size:12px;padding:4px 8px" oninput="renameScenario(this.value)">
+  </div>
+  <div class="tool-layout">
+    <div class="sidebar" id="calc-sidebar"></div>
+    <div class="main" id="calc-main"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TOOL: MONTE CARLO SIMULATOR
+     ═══════════════════════════════════════════════════════════ -->
+<div id="tool-mc" class="tool-panel">
+  <div class="tool-layout">
+    <div class="sidebar" id="mc-sidebar"></div>
+    <div class="main" id="mc-main">
+      <div class="card"><p class="hint">Adjust inputs and click <strong>Run Simulation</strong> to see results.</p></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const THIS_YEAR = new Date().getFullYear();
+
+/* ═══════════════════════════════════════════════════════════
+   SHARED PROFILE
+   ═══════════════════════════════════════════════════════════ */
+const PROFILE_DEFAULTS = {
+  hName:'', wName:'',
+  hCur:null, hRet:null, hSSA:null, hSSB:null, hInc:null, h401e:null, h401f:null,
+  wCur:null, wRet:null, wSSA:null, wSSB:null, wInc:null, w401e:null, w401f:null,
+  exp:10000, wdr:5, inf:2.5, yrs:35, balance:null
+};
+let P = {...PROFILE_DEFAULTS};
+
+function updP(k, v) { P[k] = v; saveState(); renderProfileSummary(); }
+
+function renderProfileSummary() {
+  const parts = [];
+  if (P.hName) parts.push(P.hName + (P.hCur ? ' ('+P.hCur+')' : ''));
+  if (P.wName) parts.push(P.wName + (P.wCur ? ' ('+P.wCur+')' : ''));
+  if (P.exp)   parts.push('$'+(P.exp/1000).toFixed(0)+'k/mo exp');
+  if (P.balance) parts.push(fmtM(P.balance)+' portfolio');
+  document.getElementById('profileSummary').textContent = parts.length ? parts.join(' · ') : 'not filled in';
+}
+
+// Profile field builders
+function pNum(lbl, key, opts={}) {
+  const {min=0, max=999999, pre='', suf='', ph=''} = opts;
+  const id = 'pf_'+key, v = P[key];
+  const val = (v===null||v===undefined) ? '' : v;
+  return `<div class="field"><label for="${id}">${lbl}</label>
+    <div style="position:relative;display:flex;align-items:center">
+      ${pre?`<span style="position:absolute;left:8px;font-size:12px;color:#bbb;pointer-events:none">${pre}</span>`:''}
+      <input type="number" id="${id}" value="${val}" min="${min}" max="${max}" placeholder="${ph}"
+        style="padding-left:${pre?'22px':'9px'};padding-right:${suf?'28px':'9px'}"
+        oninput="updP('${key}',this.value===''?null:+this.value)"/>
+      ${suf?`<span style="position:absolute;right:8px;font-size:12px;color:#bbb;pointer-events:none">${suf}</span>`:''}
+    </div></div>`;
+}
+function pTxt(lbl, key, ph='') {
+  const id='pf_'+key;
+  return `<div class="field"><label for="${id}">${lbl}</label>
+    <input type="text" id="${id}" value="${P[key]||''}" placeholder="${ph}"
+      oninput="updP('${key}',this.value)"/></div>`;
+}
+
+function renderProfile() {
+  document.getElementById('profileGrid').innerHTML = `
+    <div class="profile-section">
+      ${pTxt('Person 1 name','hName','e.g. Bill')}
+      <div class="field-row">${pNum('Current age','hCur',{min:20,max:85,ph:'e.g. 50'})}${pNum('Retire at age','hRet',{min:20,max:85,ph:'e.g. 56'})}</div>
+      <div class="field-row">${pNum('Claim SS at','hSSA',{min:62,max:70,ph:'62–70'})}${pNum('SS benefit/mo','hSSB',{pre:'$',ph:'est.'})}</div>
+      ${pNum('Monthly income (working)','hInc',{pre:'$',ph:'gross'})}
+      ${pNum('401k at retirement','h401e',{pre:'$',ph:'Rule of 55 / post-59½'})}
+      ${pNum('All accounts at 59½','h401f',{pre:'$',ph:'401k + IRA + other'})}
+    </div>
+    <div class="profile-section">
+      ${pTxt('Person 2 name','wName','e.g. Jane')}
+      <div class="field-row">${pNum('Current age','wCur',{min:20,max:85,ph:'e.g. 52'})}${pNum('Retire at age','wRet',{min:20,max:85,ph:'e.g. 58'})}</div>
+      <div class="field-row">${pNum('Claim SS at','wSSA',{min:62,max:70,ph:'62–70'})}${pNum('SS benefit/mo','wSSB',{pre:'$',ph:'est.'})}</div>
+      ${pNum('Monthly income (working)','wInc',{pre:'$',ph:'gross'})}
+      ${pNum('401k at retirement','w401e',{pre:'$',ph:'Rule of 55 / post-59½'})}
+      ${pNum('All accounts at 59½','w401f',{pre:'$',ph:'401k + IRA + other'})}
+    </div>
+    <div class="profile-section">
+      <h3>Shared Assumptions</h3>
+      ${pNum('Monthly expenses','exp',{pre:'$',ph:'10000'})}
+      <div class="field-row">${pNum('Withdrawal rate','wdr',{min:1,max:15,suf:'%',ph:'5'})}${pNum('Inflation rate','inf',{min:0,max:10,suf:'%',ph:'2.5'})}</div>
+      ${pNum('Projection years','yrs',{min:10,max:60,ph:'35'})}
+      ${pNum('Total portfolio balance','balance',{pre:'$',ph:'used by Monte Carlo'})}
+    </div>`;
+}
+
+function toggleProfile() {
+  const body = document.getElementById('profileBody');
+  const arrow = document.getElementById('profileArrow');
+  const open = body.classList.toggle('open');
+  arrow.classList.toggle('open', open);
+}
+
+function applyToCalc() {
+  const s = calcScenario();
+  ['hName','wName','hCur','hRet','hSSA','hSSB','hInc','h401e','h401f',
+   'wCur','wRet','wSSA','wSSB','wInc','w401e','w401f','exp','wdr','inf','yrs'].forEach(k => {
+    if (P[k] !== null && P[k] !== undefined && P[k] !== '') s[k] = P[k];
+  });
+  renderCalc();
+  saveState();
+}
+
+function applyToMC() {
+  if (P.balance !== null)  MC.balance  = P.balance;
+  if (P.hCur !== null)     MC.age      = P.hCur;
+  if (P.exp !== null)      MC.spend    = P.exp * 12;
+  if (P.inf !== null)      MC.infl     = P.inf;
+  const totalSS = ((P.hSSB||0) + (P.wSSB||0)) * 12;
+  if (totalSS > 0)         MC.otherInc = totalSS;
+  if (P.hCur && P.hRet)   MC.yrsToRet = Math.max(0, P.hRet - P.hCur);
+  if (P.yrs && P.hCur && P.hRet) MC.retYears = Math.max(1, P.yrs - (P.hRet - P.hCur));
+  const ss1 = P.hSSA||999, ss2 = P.wSSA||999;
+  const ssStart = Math.min(ss1, ss2);
+  if (ssStart < 999 && P.hCur) MC.incStart = Math.max(0, ssStart - P.hCur);
+  renderMCSidebar();
+  saveState();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOOL SWITCHING
+   ═══════════════════════════════════════════════════════════ */
+let activeTool = 'calc';
+function switchTool(t) {
+  activeTool = t;
+  document.querySelectorAll('.tool-panel').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tool-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tool-'+t).classList.add('active');
+  document.getElementById('tab-'+t).classList.add('active');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CASH FLOW CALCULATOR
+   ═══════════════════════════════════════════════════════════ */
+const CC = {hWork:'#378ADD',wWork:'#85B7EB',h401:'#1D9E75',w401:'#5DCAA5',hSS:'#EF9F27',wSS:'#FAC775',exp:'#E24B4A'};
+
+function calcSeries() {
+  const h = calcScenario().hName||'Person 1', w = calcScenario().wName||'Person 2';
+  return [
+    {k:'hWork',l:h+' work',c:CC.hWork},{k:'wWork',l:w+' work',c:CC.wWork},
+    {k:'h401', l:h+' 401k',c:CC.h401}, {k:'w401', l:w+' 401k',c:CC.w401},
+    {k:'hSS',  l:h+' SS',  c:CC.hSS},  {k:'wSS',  l:w+' SS',  c:CC.wSS}
+  ];
+}
+
+function defScenario(n='Scenario 1') {
+  return {name:n,
+    hName:'', wName:'',
+    hCur:null,hRet:null,hSSA:null,hSSB:null,hInc:null,h401e:null,h401f:null,
+    wCur:null,wRet:null,wSSA:null,wSSB:null,wInc:null,w401e:null,w401f:null,
+    exp:10000, wdr:5, inf:2.5, yrs:35, inflWork:true, infl401k:false};
+}
+
+let scenarios = [defScenario()], activeScenario = 0, calcTab = 'cashflow';
+const calcScenario = () => scenarios[activeScenario];
+
+function calcReady(s) { return (s.hCur>0&&s.hRet>0)||(s.wCur>0&&s.wRet>0); }
+
+function project(s) {
+  const rows=[], ir=(s.inf||0)/100, wr=(s.wdr||5)/100;
+  for (let y=0; y<=s.yrs; y++) {
+    const calYear=THIS_YEAR+y, ha=(s.hCur||0)+y, wa=(s.wCur||0)+y;
+    const im=Math.pow(1+ir,y), ex=(s.exp||0)*im;
+    const hw=(s.hCur&&s.hRet&&s.hInc&&ha<s.hRet)?s.hInc*(s.inflWork?im:1):0;
+    const ww=(s.wCur&&s.wRet&&s.wInc&&wa<s.wRet)?s.wInc*(s.inflWork?im:1):0;
+    const hb=ha<59.5?(s.h401e||0):(s.h401f||s.h401e||0);
+    const h4=(s.hCur&&s.hRet&&s.h401e&&ha>=s.hRet)?(hb*wr)/12*(s.infl401k?im:1):0;
+    const wb=wa<59.5?(s.w401e||0):(s.w401f||s.w401e||0);
+    const w4=(s.wCur&&s.wRet&&s.w401e&&wa>=s.wRet)?(wb*wr)/12*(s.infl401k?im:1):0;
+    const hs=(s.hCur&&s.hSSA&&s.hSSB&&ha>=s.hSSA)?s.hSSB*im:0;
+    const ws=(s.wCur&&s.wSSA&&s.wSSB&&wa>=s.wSSA)?s.wSSB*im:0;
+    const inc=hw+ww+h4+w4+hs+ws;
+    rows.push({y,calYear,ha,wa,
+      hWork:Math.round(hw),wWork:Math.round(ww),h401:Math.round(h4),w401:Math.round(w4),
+      hSS:Math.round(hs),wSS:Math.round(ws),inc:Math.round(inc),ex:Math.round(ex),gap:Math.round(inc-ex)});
+  }
+  return rows;
+}
+
+const fK = n => { const a=Math.abs(Math.round(n)); return (n<0?'-':'')+(a>=1000?'$'+Math.round(a/1000)+'k':'$'+a); };
+const fD = n => (n>=0?'+':'')+fK(n);
+
+function drawCalcBar(cv, data) {
+  const dpr=devicePixelRatio||1, W=cv.offsetWidth, H=300;
+  cv.width=W*dpr; cv.height=H*dpr; cv.style.height=H+'px';
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  const p={t:12,r:12,b:48,l:58}, cw=W-p.l-p.r, ch=H-p.t-p.b;
+  const mx=Math.max(...data.map(d=>d.inc),...data.map(d=>d.ex))*1.12||1;
+  const yS=v=>p.t+ch-(v/mx)*ch;
+  ctx.strokeStyle='#e8e7e0'; ctx.lineWidth=0.5;
+  for(let i=0;i<=4;i++){
+    const y=p.t+(ch/4)*i;
+    ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(p.l+cw,y);ctx.stroke();
+    ctx.fillStyle='#999';ctx.font='10px system-ui';ctx.textAlign='right';
+    ctx.fillText(fK(mx*(1-i/4)),p.l-4,y+4);
+  }
+  const bw=Math.max(2,(cw/data.length)-1.5);
+  const bx=i=>p.l+(i/data.length)*cw+(cw/data.length-bw)/2;
+  data.forEach((d,i)=>{
+    const x=bx(i); let yb=p.t+ch;
+    calcSeries().forEach(s=>{const vv=d[s.k];if(!vv)return;const h=(vv/mx)*ch;ctx.fillStyle=s.c;ctx.fillRect(x,yb-h,bw,h);yb-=h;});
+  });
+  ctx.strokeStyle=CC.exp;ctx.lineWidth=2;ctx.beginPath();
+  data.forEach((d,i)=>{const x=bx(i)+bw/2,y=yS(d.ex);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.stroke();
+  data.forEach((d,i)=>{
+    if(d.y%5===0){
+      ctx.fillStyle='#444';ctx.font='500 10px system-ui';ctx.textAlign='center';
+      ctx.fillText(d.calYear,bx(i)+bw/2,p.t+ch+16);
+      ctx.fillStyle='#999';ctx.font='10px system-ui';
+      const ages=[d.ha>0?d.ha:null,d.wa>0?d.wa:null].filter(Boolean).join('/');
+      if(ages) ctx.fillText(ages,bx(i)+bw/2,p.t+ch+30);
+    }
+  });
+}
+
+function drawCalcGap(cv, data) {
+  const dpr=devicePixelRatio||1, W=cv.offsetWidth, H=280;
+  cv.width=W*dpr; cv.height=H*dpr; cv.style.height=H+'px';
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  const p={t:12,r:12,b:48,l:64}, cw=W-p.l-p.r, ch=H-p.t-p.b;
+  const mx=Math.max(...data.map(d=>Math.abs(d.gap)))*1.15||1;
+  const ym=p.t+ch/2;
+  ctx.strokeStyle='#e8e7e0';ctx.lineWidth=0.5;
+  [-1,-0.5,0,0.5,1].forEach(t=>{
+    const y=ym-t*(ch/2);
+    ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(p.l+cw,y);ctx.stroke();
+    ctx.fillStyle='#999';ctx.font='10px system-ui';ctx.textAlign='right';
+    ctx.fillText(fK(t*mx),p.l-4,y+4);
+  });
+  ctx.strokeStyle='#bbb';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(p.l,ym);ctx.lineTo(p.l+cw,ym);ctx.stroke();
+  const bw=Math.max(2,(cw/data.length)-1.5);
+  const bx=i=>p.l+(i/data.length)*cw+(cw/data.length-bw)/2;
+  data.forEach((d,i)=>{
+    const x=bx(i),frac=(Math.abs(d.gap)/mx)*(ch/2);
+    if(d.gap>=0){ctx.fillStyle='#1D9E75';ctx.fillRect(x,ym-frac,bw,frac);}
+    else{ctx.fillStyle='#E24B4A';ctx.fillRect(x,ym,bw,frac);}
+  });
+  ctx.fillStyle='#444';ctx.font='500 10px system-ui';ctx.textAlign='center';
+  data.forEach((d,i)=>{
+    if(d.y%5===0){
+      ctx.fillText(d.calYear,bx(i)+bw/2,p.t+ch+16);
+      ctx.fillStyle='#999';ctx.font='10px system-ui';
+      const ages=[d.ha>0?d.ha:null,d.wa>0?d.wa:null].filter(Boolean).join('/');
+      if(ages) ctx.fillText(ages,bx(i)+bw/2,p.t+ch+30);
+      ctx.fillStyle='#444';ctx.font='500 10px system-ui';
+    }
+  });
+}
+
+// Field builder for calculator (reads from current scenario)
+function cF(lbl, key, opts={}) {
+  const {min=0,max=999999,pre='',suf='',ph=''}=opts, id='cf_'+key, cur=calcScenario()[key];
+  const val=(cur===null||cur===undefined)?'':cur;
+  return `<div class="field"><label for="${id}">${lbl}</label>
+    <div style="position:relative;display:flex;align-items:center">
+      ${pre?`<span style="position:absolute;left:8px;font-size:12px;color:#bbb;pointer-events:none">${pre}</span>`:''}
+      <input type="number" id="${id}" value="${val}" min="${min}" max="${max}" placeholder="${ph}"
+        style="padding-left:${pre?'22px':'9px'};padding-right:${suf?'28px':'9px'}"
+        oninput="updCalc('${key}',this.value===''?null:+this.value)"/>
+      ${suf?`<span style="position:absolute;right:8px;font-size:12px;color:#bbb;pointer-events:none">${suf}</span>`:''}
+    </div></div>`;
+}
+
+function renderCalcSidebar() {
+  const s = calcScenario();
+  document.getElementById('calc-sidebar').innerHTML = `
+    <div class="card">
+      <input type="text" value="${s.hName||'Person 1'}" placeholder="Person 1 name"
+        style="font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;border:none;border-bottom:1px solid transparent;border-radius:0;padding:0;background:transparent;width:100%;outline:none"
+        onfocus="this.style.borderBottomColor='#d0cfc7'" onblur="this.style.borderBottomColor='transparent'"
+        oninput="updCalc('hName',this.value)"/>
+      <div class="field-row">${cF('Current age','hCur',{min:20,max:85,ph:'e.g. 50'})}${cF('Retire at age','hRet',{min:20,max:85,ph:'e.g. 56'})}</div>
+      <div class="field-row">${cF('Claim SS at age','hSSA',{min:62,max:70,ph:'62–70'})}${cF('SS benefit / mo','hSSB',{pre:'$',ph:'est.'})}</div>
+      ${cF('Monthly income (working)','hInc',{pre:'$',ph:'gross'})}
+      ${cF('401k at retirement','h401e',{pre:'$',ph:'Rule of 55 or post-59½'})}
+      ${cF('All accounts at 59½','h401f',{pre:'$',ph:'401k + IRA + other'})}
+    </div>
+    <div class="card">
+      <input type="text" value="${s.wName||'Person 2'}" placeholder="Person 2 name"
+        style="font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;border:none;border-bottom:1px solid transparent;border-radius:0;padding:0;background:transparent;width:100%;outline:none"
+        onfocus="this.style.borderBottomColor='#d0cfc7'" onblur="this.style.borderBottomColor='transparent'"
+        oninput="updCalc('wName',this.value)"/>
+      <div class="field-row">${cF('Current age','wCur',{min:20,max:85,ph:'e.g. 52'})}${cF('Retire at age','wRet',{min:20,max:85,ph:'e.g. 58'})}</div>
+      <div class="field-row">${cF('Claim SS at age','wSSA',{min:62,max:70,ph:'62–70'})}${cF('SS benefit / mo','wSSB',{pre:'$',ph:'est.'})}</div>
+      ${cF('Monthly income (working)','wInc',{pre:'$',ph:'gross'})}
+      ${cF('401k at retirement','w401e',{pre:'$',ph:'Rule of 55 or post-59½'})}
+      ${cF('All accounts at 59½','w401f',{pre:'$',ph:'401k + IRA + other'})}
+    </div>
+    <div class="card"><h3>Assumptions</h3>
+      ${cF('Monthly expenses','exp',{pre:'$',ph:'10000'})}
+      <div class="field-row">${cF('Withdrawal rate','wdr',{min:1,max:15,suf:'%',ph:'5'})}${cF('Inflation rate','inf',{min:0,max:10,suf:'%',ph:'2.5'})}</div>
+      ${cF('Projection years','yrs',{min:10,max:60,ph:'35'})}
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:7px;border-top:1px solid #f0efe8;padding-top:10px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:#444">
+          <input type="checkbox" ${s.inflWork?'checked':''} onchange="updCalc('inflWork',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#1a1a18">
+          Inflate work income with CPI
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:#444">
+          <input type="checkbox" ${s.infl401k?'checked':''} onchange="updCalc('infl401k',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#1a1a18">
+          Inflate 401k withdrawals with CPI
+          <span style="font-size:11px;color:#aaa">(aggressive)</span>
+        </label>
+      </div>
+    </div>
+    <p class="footer">For planning discussions only — not financial advice.</p>`;
+}
+
+function renderCalcMain() {
+  const s = calcScenario();
+  if (!calcReady(s)) {
+    document.getElementById('calc-main').innerHTML =
+      `<div class="card"><p class="hint">Enter at least one person's current age and retirement age to see projections.</p></div>`;
+    return;
+  }
+  const data = project(s);
+  const fg = data.find(d=>d.gap>=0&&d.y>0);
+  const tot = data.reduce((a,d)=>a+(d.gap<0?Math.abs(d.gap)*12:0), 0);
+  const last = data[data.length-1], d0 = data[0];
+  document.getElementById('calc-main').innerHTML = `
+    <div class="metric-grid">
+      <div class="metric ${d0.gap>=0?'good':'bad'}">
+        <div class="lbl">Income vs expenses (${THIS_YEAR})</div>
+        <div class="val">${fD(d0.gap)}/mo</div>
+      </div>
+      <div class="metric ${fg?'good':'bad'}">
+        <div class="lbl">Break-even year</div>
+        <div class="val">${fg?fg.calYear:'Not reached'}</div>
+      </div>
+      <div class="metric ${tot>0?'bad':'good'}">
+        <div class="lbl">Total projected shortfall</div>
+        <div class="val">${tot>0?fK(tot):'None'}</div>
+      </div>
+      <div class="metric ${last.gap>=0?'good':'bad'}">
+        <div class="lbl">Gap in ${last.calYear}</div>
+        <div class="val">${fD(last.gap)}/mo</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tabs">
+        <button class="tab ${calcTab==='cashflow'?'active':''}" onclick="switchCalcTab('cashflow')">Cash flow</button>
+        <button class="tab ${calcTab==='gap'?'active':''}" onclick="switchCalcTab('gap')">Surplus / shortfall</button>
+      </div>
+      <div class="legend" id="calc-leg"></div>
+      <canvas id="calc-cv"></canvas>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px">Year-by-year detail</h3>
+      <div style="overflow-x:auto"><table>
+        <thead><tr>
+          <th style="text-align:left">Year</th>
+          <th>${s.hName||'P1'}.age</th><th>${s.wName||'P2'}.age</th>
+          <th>${s.hName||'P1'}.work</th><th>${s.wName||'P2'}.work</th>
+          <th>${s.hName||'P1'}.401k</th><th>${s.wName||'P2'}.401k</th>
+          <th>${s.hName||'P1'}.SS</th><th>${s.wName||'P2'}.SS</th>
+          <th>Income</th><th>Expenses</th><th>Gap</th>
+        </tr></thead>
+        <tbody>${data.map(d=>`<tr class="${d.gap<0?'deficit':''}">
+          <td style="text-align:left;font-weight:500">${d.calYear}</td>
+          <td class="${!s.hCur?'mu':''}">${s.hCur?d.ha:'—'}</td>
+          <td class="${!s.wCur?'mu':''}">${s.wCur?d.wa:'—'}</td>
+          ${[d.hWork,d.wWork,d.h401,d.w401,d.hSS,d.wSS].map(vv=>`<td class="${vv===0?'mu':''}">${vv===0?'—':fK(vv)}</td>`).join('')}
+          <td><strong>${fK(d.inc)}</strong></td><td>${fK(d.ex)}</td>
+          <td class="${d.gap>=0?'gp':'gn'}">${fD(d.gap)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  requestAnimationFrame(()=>{
+    const cv = document.getElementById('calc-cv'); if(!cv) return;
+    if (calcTab==='cashflow') {
+      document.getElementById('calc-leg').innerHTML =
+        calcSeries().map(s=>`<div class="li"><div class="ls" style="background:${s.c}"></div>${s.l}</div>`).join('') +
+        `<div class="li"><div class="ls" style="background:${CC.exp}"></div>Expenses</div>`;
+      drawCalcBar(cv, data);
+    } else {
+      document.getElementById('calc-leg').innerHTML =
+        `<div class="li"><div class="ls" style="background:#1D9E75"></div>Surplus</div>
+         <div class="li"><div class="ls" style="background:#E24B4A"></div>Shortfall</div>`;
+      drawCalcGap(cv, data);
+    }
+  });
+}
+
+function renderCalcScenarioBar() {
+  document.getElementById('calc-stags').innerHTML =
+    scenarios.map((s,i)=>`<button class="stag${i===activeScenario?' active':''}" onclick="selectScenario(${i})">${s.name}</button>`).join('');
+  document.getElementById('calc-sname').value = calcScenario().name;
+}
+
+function renderCalc() { renderCalcSidebar(); renderCalcMain(); renderCalcScenarioBar(); }
+function selectScenario(i) { activeScenario=i; renderCalc(); }
+function updCalc(k,v) { scenarios[activeScenario][k]=v; renderCalcMain(); saveState(); }
+function renameScenario(n) { scenarios[activeScenario].name=n; renderCalcScenarioBar(); saveState(); }
+function switchCalcTab(t) { calcTab=t; renderCalcMain(); }
+function addScenario() { const c=JSON.parse(JSON.stringify(calcScenario())); c.name='Scenario '+(scenarios.length+1); scenarios.push(c); activeScenario=scenarios.length-1; renderCalc(); saveState(); }
+function removeScenario() { if(scenarios.length===1) return; scenarios.splice(activeScenario,1); activeScenario=Math.max(0,activeScenario-1); renderCalc(); saveState(); }
+
+/* ═══════════════════════════════════════════════════════════
+   MONTE CARLO SIMULATOR
+   ═══════════════════════════════════════════════════════════ */
+let MC = {
+  balance:1700000, age:50,
+  contrib:70000, yrsToRet:5,
+  spend:100000, retYears:35,
+  otherInc:50000, incStart:17,
+  mean:7.6, vol:11.0, infl:2.7,
+  preset:'7.6,11.0', sims:5000
+};
+
+function randn() {
+  let u=0, v=0;
+  while(u===0) u=Math.random();
+  while(v===0) v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
+function pctile(arr, p) {
+  if(!arr.length) return 0;
+  const idx=(arr.length-1)*p, lo=Math.floor(idx), hi=Math.ceil(idx);
+  return lo===hi ? arr[lo] : arr[lo]+(arr[hi]-arr[lo])*(idx-lo);
+}
+
+function fmtM(v) {
+  const neg=v<0; v=Math.abs(v);
+  let s = v>=1e6 ? '$'+(v/1e6).toFixed(v>=1e7?1:2)+'M' : v>=1e3 ? '$'+Math.round(v/1e3)+'K' : '$'+Math.round(v);
+  return (neg?'-':'')+s;
+}
+
+function simulate(p) {
+  const m=p.mean/100, s=p.vol/100;
+  const onePlusM=1+m;
+  const sigmaLog=Math.sqrt(Math.log(1+(s*s)/(onePlusM*onePlusM)));
+  const muLog=Math.log(onePlusM)-0.5*sigmaLog*sigmaLog;
+  const T=p.yrsToRet+p.retYears;
+  const traj=new Array(T+1);
+  for(let t=0;t<=T;t++) traj[t]=new Float64Array(p.sims);
+  const ends=new Float64Array(p.sims), lasted=new Float64Array(p.sims);
+  let successes=0;
+  for(let i=0;i<p.sims;i++){
+    let bal=p.balance; traj[0][i]=bal;
+    let failed=false, failYear=p.retYears;
+    for(let t=1;t<=T;t++){
+      const g=Math.exp(muLog+sigmaLog*randn());
+      if(t<=p.yrsToRet){
+        bal=bal*g+p.contrib;
+      } else {
+        const off=t-1;
+        const inflF=Math.pow(1+p.infl/100,off);
+        bal-=p.spend*inflF - (off>=p.incStart?p.otherInc*inflF:0);
+        if(bal<0&&!failed){failed=true;failYear=t-p.yrsToRet;bal=0;}
+        if(bal>0) bal*=g;
+      }
+      if(bal<0) bal=0;
+      traj[t][i]=bal;
+    }
+    ends[i]=bal;
+    successes+=(!failed?1:0);
+    lasted[i]=failed?failYear:p.retYears;
+  }
+  const bands={p10:[],p25:[],p50:[],p75:[],p90:[]};
+  for(let t=0;t<=T;t++){
+    const col=Array.from(traj[t]).sort((a,b)=>a-b);
+    bands.p10.push(pctile(col,.10)); bands.p25.push(pctile(col,.25)); bands.p50.push(pctile(col,.50));
+    bands.p75.push(pctile(col,.75)); bands.p90.push(pctile(col,.90));
+  }
+  const es=Array.from(ends).sort((a,b)=>a-b), ls=Array.from(lasted).sort((a,b)=>a-b);
+  return {successRate:successes/p.sims, medianEnd:pctile(es,.50), p10End:pctile(es,.10), p90End:pctile(es,.90),
+          yearsP10:pctile(ls,.10), bands, ends, T, params:p};
+}
+
+function drawMCFan(cv, r) {
+  const dpr=devicePixelRatio||1, W=cv.clientWidth, H=320;
+  cv.width=W*dpr; cv.height=H*dpr;
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  const L=64,R=16,T=16,B=32, pw=W-L-R, ph=H-T-B, p=r.params;
+  const maxY=Math.max(...r.bands.p90,1)*1.05;
+  const x=t=>L+(t/r.T)*pw, y=v=>T+ph-(v/maxY)*ph;
+  ctx.font='10px system-ui'; ctx.textBaseline='middle';
+  for(let i=0;i<=5;i++){
+    const v=maxY*i/5, yy=y(v);
+    ctx.strokeStyle='#e8e7e0'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(L,yy); ctx.lineTo(W-R,yy); ctx.stroke();
+    ctx.fillStyle='#999'; ctx.textAlign='right'; ctx.fillText(fmtM(v),L-5,yy);
+  }
+  const rx=x(p.yrsToRet);
+  ctx.setLineDash([4,4]); ctx.strokeStyle='#ccc'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(rx,T); ctx.lineTo(rx,T+ph); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#999'; ctx.textAlign='center'; ctx.textBaseline='top'; ctx.font='10px system-ui';
+  ctx.fillText('retire',rx,T+3);
+  const step=Math.ceil(r.T/8);
+  for(let t=0;t<=r.T;t+=step){ctx.fillStyle='#bbb';ctx.textBaseline='top';ctx.fillText(p.age+t,x(t),T+ph+8);}
+  const fill=(top,bot,color)=>{
+    ctx.beginPath(); ctx.moveTo(x(0),y(top[0]));
+    for(let t=1;t<=r.T;t++) ctx.lineTo(x(t),y(top[t]));
+    for(let t=r.T;t>=0;t--) ctx.lineTo(x(t),y(bot[t]));
+    ctx.closePath(); ctx.fillStyle=color; ctx.fill();
+  };
+  fill(r.bands.p90,r.bands.p10,'rgba(55,138,221,.10)');
+  fill(r.bands.p75,r.bands.p25,'rgba(55,138,221,.22)');
+  ctx.beginPath();
+  for(let t=0;t<=r.T;t++){const xx=x(t),yy=y(r.bands.p50[t]);t===0?ctx.moveTo(xx,yy):ctx.lineTo(xx,yy);}
+  ctx.strokeStyle='#378ADD'; ctx.lineWidth=2.5; ctx.stroke();
+}
+
+function drawMCHist(cv, r) {
+  const dpr=devicePixelRatio||1, W=cv.clientWidth, H=180;
+  cv.width=W*dpr; cv.height=H*dpr;
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  const L=56,R=14,T=12,B=26, pw=W-L-R, ph=H-T-B;
+  const data=Array.from(r.ends), fails=data.filter(v=>v<=0).length, pos=data.filter(v=>v>0);
+  const cap=r.p90End>0?r.p90End*1.4:(pos.length?Math.max(...pos):1);
+  const nb=28, bins=new Array(nb).fill(0);
+  pos.forEach(v=>{let i=Math.floor((v/cap)*nb);bins[Math.min(Math.max(i,0),nb-1)]++;});
+  const maxC=Math.max(fails,...bins,1), bw=pw/(nb+1);
+  const by=c=>T+ph-(c/maxC)*ph;
+  ctx.strokeStyle='#e8e7e0'; ctx.beginPath(); ctx.moveTo(L,T+ph); ctx.lineTo(W-R,T+ph); ctx.stroke();
+  ctx.fillStyle='#E24B4A'; ctx.fillRect(L+2,by(fails),bw-3,T+ph-by(fails));
+  for(let i=0;i<nb;i++){ctx.fillStyle='#1D9E75';ctx.fillRect(L+(i+1)*bw+2,by(bins[i]),bw-3,T+ph-by(bins[i]));}
+  ctx.font='10px system-ui'; ctx.textBaseline='top';
+  ctx.fillStyle='#E24B4A'; ctx.textAlign='center'; ctx.fillText('ran out',L+bw/2+2,T+ph+8);
+  ctx.fillStyle='#bbb';
+  for(let f=0.25;f<=1;f+=0.25){ctx.fillText(fmtM(cap*f),L+(Math.round(f*nb)+.5)*bw,T+ph+8);}
+}
+
+function mF(lbl, key, opts={}) {
+  const {min=0,max=999999,pre='',suf='',ph='',step=1}=opts, id='mc_'+key;
+  const val=MC[key]!==undefined?MC[key]:'';
+  return `<div class="field"><label for="${id}">${lbl}</label>
+    <div style="position:relative;display:flex;align-items:center">
+      ${pre?`<span style="position:absolute;left:8px;font-size:12px;color:#bbb;pointer-events:none">${pre}</span>`:''}
+      <input type="number" id="${id}" value="${val}" min="${min}" max="${max}" step="${step}" placeholder="${ph}"
+        style="padding-left:${pre?'22px':'9px'};padding-right:${suf?'28px':'9px'}"
+        oninput="updMC('${key}',+this.value)"/>
+      ${suf?`<span style="position:absolute;right:8px;font-size:12px;color:#bbb;pointer-events:none">${suf}</span>`:''}
+    </div></div>`;
+}
+
+function updMC(k,v) { MC[k]=v; saveState(); }
+
+function renderMCSidebar() {
+  document.getElementById('mc-sidebar').innerHTML = `
+    <div class="card"><h3>Today</h3>
+      ${mF('Current portfolio','balance',{pre:'$',step:10000})}
+      ${mF('Current age','age',{min:20,max:85})}
+    </div>
+    <div class="card"><h3>Accumulation</h3>
+      ${mF('Annual contributions','contrib',{pre:'$',step:1000})}
+      ${mF('Years until retirement','yrsToRet',{min:0,max:50})}
+    </div>
+    <div class="card"><h3>Retirement</h3>
+      ${mF("Annual spending (today's $)",'spend',{pre:'$',step:1000})}
+      ${mF('Years in retirement','retYears',{min:1,max:60})}
+      ${mF("Other income — SS, etc. (today's $)",'otherInc',{pre:'$',step:1000})}
+      ${mF('…starts in (years from now)','incStart',{min:0,max:50})}
+    </div>
+    <div class="card"><h3>Market Assumptions</h3>
+      <div class="field">
+        <label for="mc_preset">Allocation preset</label>
+        <select id="mc_preset" onchange="mcPresetChange(this.value)">
+          <option value="9.8,18.0" ${MC.preset==='9.8,18.0'?'selected':''}>100% Stocks</option>
+          <option value="8.8,14.5" ${MC.preset==='8.8,14.5'?'selected':''}>80 / 20</option>
+          <option value="8.2,12.8" ${MC.preset==='8.2,12.8'?'selected':''}>70 / 30</option>
+          <option value="7.6,11.0" ${MC.preset==='7.6,11.0'?'selected':''}>60 / 40</option>
+          <option value="7.0,9.5"  ${MC.preset==='7.0,9.5' ?'selected':''}>50 / 50</option>
+          <option value="6.4,8.0"  ${MC.preset==='6.4,8.0' ?'selected':''}>40 / 60</option>
+          <option value="custom"   ${MC.preset==='custom'   ?'selected':''}>Custom</option>
+        </select>
+      </div>
+      <div class="field-row">
+        ${mF('Mean return','mean',{suf:'%',step:0.1})}
+        ${mF('Volatility','vol',{suf:'%',step:0.1})}
+      </div>
+      ${mF('Inflation','infl',{suf:'%',step:0.1})}
+    </div>
+    <div class="card"><h3>Simulation</h3>
+      ${mF('Number of paths','sims',{min:500,max:50000,step:500})}
+      <button class="runbtn" onclick="runMC()">Run Simulation</button>
+    </div>
+    <p class="footer">For planning discussions only — not financial advice.</p>`;
+}
+
+function mcPresetChange(v) {
+  MC.preset=v;
+  if(v!=='custom'){const[m,vol]=v.split(',');MC.mean=parseFloat(m);MC.vol=parseFloat(vol);}
+  renderMCSidebar(); saveState();
+}
+
+function runMC() {
+  const p={...MC, yrsToRet:Math.max(0,Math.round(MC.yrsToRet)), retYears:Math.max(1,Math.round(MC.retYears)),
+           incStart:Math.max(0,Math.round(MC.incStart)), sims:Math.min(50000,Math.max(500,Math.round(MC.sims)))};
+  const r=simulate(p), sr=r.successRate;
+  let color,label,msg;
+  if(sr>=.90){color='#1a7a4a';label='STRONG';
+    msg='Your plan holds up across the large majority of market scenarios. The main risk is a poor sequence of early returns — keep a cash buffer so you never sell into a crash.';}
+  else if(sr>=.75){color='#7a5c00';label='WORKABLE';
+    msg='Reasonable odds, but with meaningful tail risk. Small levers — trimming spending, working part-time a few extra years, or adding a cash bucket — push this toward safety.';}
+  else if(sr>=.55){color='#9a4a00';label='FRAGILE';
+    msg='This plan fails in a large share of futures. Consider lower spending, more guaranteed income, a later start, or a de-risked glide path into retirement.';}
+  else{color='#c0392b';label='AT RISK';
+    msg='The money runs out in most scenarios as configured. Spending, time horizon, or income likely need to change before this is viable.';}
+
+  document.getElementById('mc-main').innerHTML=`
+    <div class="card">
+      <div class="mc-verdict">
+        <div class="mc-prob" style="color:${color}">${Math.round(sr*100)}<small>% success</small></div>
+        <div style="flex:1;min-width:180px">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:#888;margin-bottom:6px">
+            Verdict <span class="mc-pill" style="color:${color};border-color:${color}">${label}</span>
+          </div>
+          <div style="font-size:13px;color:#555">${msg}</div>
+        </div>
+      </div>
+      <div class="mc-stats">
+        <div class="mc-stat">
+          <div class="s-lab">Median ending balance</div>
+          <div class="s-val">${fmtM(r.medianEnd)}</div>
+          <div class="s-note">50th percentile, at horizon end</div>
+        </div>
+        <div class="mc-stat">
+          <div class="s-lab">Downside (10th pct)</div>
+          <div class="s-val">${fmtM(r.p10End)}</div>
+          <div class="s-note">1-in-10 worst outcome</div>
+        </div>
+        <div class="mc-stat">
+          <div class="s-lab">Money lasts (10th pct)</div>
+          <div class="s-val">${Math.floor(r.yearsP10)} yrs</div>
+          <div class="s-note">≈ age ${p.age+p.yrsToRet+Math.floor(r.yearsP10)}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:20px">
+        <div class="mc-chart-label">Portfolio paths over time</div>
+        <div class="mc-chart-sub">Shaded bands: 10–90th and 25–75th percentile range. Blue line is the median path.</div>
+        <div class="legend">
+          <div class="li"><div class="ls" style="background:rgba(55,138,221,.15)"></div>10–90%</div>
+          <div class="li"><div class="ls" style="background:rgba(55,138,221,.30)"></div>25–75%</div>
+          <div class="li"><div class="ls" style="background:#378ADD;height:3px;border-radius:0"></div>Median</div>
+        </div>
+        <canvas id="mc-fan" style="border:1px solid #e0dfd8;border-radius:8px;background:#fff"></canvas>
+      </div>
+      <div>
+        <div class="mc-chart-label">Distribution of outcomes</div>
+        <div class="mc-chart-sub">Where every simulated path ends up. Red bar = ran out of money.</div>
+        <canvas id="mc-hist" style="border:1px solid #e0dfd8;border-radius:8px;background:#fff"></canvas>
+      </div>
+      <p class="mc-note">
+        <b>How to read this:</b> Each of ${p.sims.toLocaleString()} paths draws a random annual return from a log-normal
+        distribution (arithmetic mean ${p.mean.toFixed(1)}%, volatility ${p.vol.toFixed(1)}%). Spending and income grow with
+        inflation; success means the portfolio never hits zero through all ${p.retYears} retirement years.
+        <b>Caveats:</b> Forward returns may be lower than historical averages; real markets exhibit fat tails and serial
+        correlation this model omits. Withdrawals are pre-tax — raise spending to account for your effective rate. Not financial advice.
+      </p>
+    </div>`;
+  requestAnimationFrame(()=>{
+    const fan=document.getElementById('mc-fan'), hist=document.getElementById('mc-hist');
+    if(fan)  drawMCFan(fan,r);
+    if(hist) drawMCHist(hist,r);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PERSISTENCE
+   ═══════════════════════════════════════════════════════════ */
+function saveState() {
+  try { localStorage.setItem('retirement-suite-v1', JSON.stringify({P, scenarios, activeScenario, MC})); } catch(e){}
+}
+
+function loadState() {
+  try {
+    const raw=localStorage.getItem('retirement-suite-v1'); if(!raw) return;
+    const d=JSON.parse(raw);
+    if(d.P) P=Object.assign({},PROFILE_DEFAULTS,d.P);
+    if(d.scenarios&&Array.isArray(d.scenarios)&&d.scenarios.length) scenarios=d.scenarios;
+    if(typeof d.activeScenario==='number') activeScenario=Math.max(0,Math.min(d.activeScenario,scenarios.length-1));
+    if(d.MC) MC=Object.assign({},MC,d.MC);
+  } catch(e){}
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EXPORT / IMPORT
+   ═══════════════════════════════════════════════════════════ */
+function exportAll() {
+  const blob=new Blob([JSON.stringify({P,scenarios,MC},null,2)],{type:'application/json'});
+  const u=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=u; a.download='retirement-plan.json'; a.click(); URL.revokeObjectURL(u);
+}
+
+function importAll(input) {
+  const f=input.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try {
+      const d=JSON.parse(e.target.result);
+      if(d.P) P=Object.assign({},PROFILE_DEFAULTS,d.P);
+      if(d.scenarios&&Array.isArray(d.scenarios)&&d.scenarios.length){scenarios=d.scenarios;activeScenario=0;}
+      if(d.MC) MC=Object.assign({},MC,d.MC);
+      saveState(); init();
+    } catch { alert('Invalid JSON file'); }
+  };
+  reader.readAsText(f); input.value='';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+   Adding a new tool:
+   1. Add a tab button above with id="tab-<id>"
+   2. Add a tool panel div with id="tool-<id>"
+   3. Add render/logic functions prefixed with your tool name
+   4. Call your render function from init() below
+   ═══════════════════════════════════════════════════════════ */
+function init() {
+  renderProfile();
+  renderProfileSummary();
+  renderCalc();
+  renderMCSidebar();
+}
+
+window.addEventListener('resize', ()=>{
+  const cv=document.getElementById('calc-cv');
+  if(cv&&calcReady(calcScenario())){
+    calcTab==='cashflow'?drawCalcBar(cv,project(calcScenario())):drawCalcGap(cv,project(calcScenario()));
+  }
+});
+
+loadState();
+init();
+</script>
+</body>
+</html>

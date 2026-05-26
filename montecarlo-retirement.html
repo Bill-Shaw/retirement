@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monte Carlo Retirement Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0f14;
+    --panel:#121620;
+    --panel-2:#161b27;
+    --line:#232a3a;
+    --line-soft:#1a2030;
+    --ink:#e8eaf2;
+    --ink-dim:#9aa6bd;
+    --ink-faint:#5d6a82;
+    --gold:#e0b35c;
+    --gold-soft:#7a6230;
+    --good:#5bbf8a;
+    --bad:#d96b6b;
+    --warn:#d9a85b;
+    --band-1:rgba(224,179,92,.07);
+    --band-2:rgba(224,179,92,.16);
+    --median:#e0b35c;
+    --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+    --serif:"Fraunces","Iowan Old Style",Georgia,serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:
+      radial-gradient(1200px 600px at 80% -10%, #16203022, transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #1b160f33, transparent 55%),
+      var(--bg);
+    color:var(--ink);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;line-height:1.5;
+    padding:32px 20px 80px;
+  }
+  .wrap{max-width:1120px;margin:0 auto}
+  header{margin-bottom:28px;border-bottom:1px solid var(--line);padding-bottom:20px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);margin:0 0 10px}
+  h1{font-family:var(--serif);font-weight:500;font-size:clamp(28px,4.5vw,44px);line-height:1.05;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--ink-dim);max-width:62ch;margin:12px 0 0;font-size:14.5px}
+  .layout{display:grid;grid-template-columns:340px 1fr;gap:24px;margin-top:28px}
+  @media(max-width:860px){.layout{grid-template-columns:1fr}}
+
+  .panel{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:14px}
+  .controls{padding:22px 20px;align-self:start;position:sticky;top:20px}
+  .group{margin-bottom:22px}
+  .group:last-child{margin-bottom:0}
+  .group-title{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 12px;display:flex;align-items:center;gap:10px}
+  .group-title::after{content:"";flex:1;height:1px;background:var(--line-soft)}
+
+  label.field{display:block;margin-bottom:13px}
+  label.field .lab{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-dim);margin-bottom:5px}
+  .hint{color:var(--ink-faint);font-size:11px}
+  .inp{position:relative}
+  .inp .pre,.inp .suf{position:absolute;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:13px;color:var(--ink-faint)}
+  .inp .pre{left:11px}.inp .suf{right:11px}
+  input[type=number],select{
+    width:100%;background:#0b0e14;border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);font-family:var(--mono);font-size:14px;padding:9px 11px;outline:none;
+    transition:border-color .15s,box-shadow .15s;
+  }
+  input.has-pre{padding-left:24px}input.has-suf{padding-right:30px}
+  input:focus,select:focus{border-color:var(--gold-soft);box-shadow:0 0 0 3px #e0b35c1a}
+  select{cursor:pointer;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink-faint) 50%),linear-gradient(135deg,var(--ink-faint) 50%,transparent 50%);background-position:calc(100% - 16px) calc(50% - 2px),calc(100% - 11px) calc(50% - 2px);background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .runbtn{width:100%;margin-top:4px;background:linear-gradient(180deg,#f0c473,#d49f3f);color:#1a1305;border:none;border-radius:9px;font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.05em;padding:12px;cursor:pointer;text-transform:uppercase;transition:transform .08s,filter .15s}
+  .runbtn:hover{filter:brightness(1.06)}.runbtn:active{transform:translateY(1px)}
+
+  /* results */
+  .results{padding:22px 24px}
+  .verdict{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:22px}
+  .prob{font-family:var(--serif);font-size:clamp(46px,9vw,76px);font-weight:500;line-height:.9;letter-spacing:-.02em}
+  .prob small{font-size:.42em;color:var(--ink-dim);font-family:var(--mono);font-weight:400;margin-left:4px;letter-spacing:0}
+  .verdict-txt{flex:1;min-width:200px}
+  .verdict-txt .vt-lab{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:4px}
+  .verdict-txt .vt-msg{font-size:14px;color:var(--ink-dim)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;letter-spacing:.04em;border:1px solid}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:24px}
+  @media(max-width:520px){.stats{grid-template-columns:1fr}}
+  .stat{background:var(--panel-2);padding:14px 16px}
+  .stat .s-lab{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px}
+  .stat .s-val{font-family:var(--mono);font-size:21px;font-weight:500}
+  .stat .s-note{font-size:11px;color:var(--ink-dim);margin-top:3px}
+
+  .chart-block{margin-bottom:26px}
+  .chart-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+  .chart-title{font-family:var(--serif);font-size:18px;font-weight:500}
+  .chart-sub{font-size:12px;color:var(--ink-dim);max-width:48ch}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--ink-dim)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:14px;height:9px;border-radius:2px;display:inline-block}
+  canvas{width:100%;display:block;border-radius:10px;background:#0a0d12;border:1px solid var(--line)}
+
+  .note{font-size:12px;color:var(--ink-faint);border-top:1px solid var(--line);padding-top:16px;margin-top:8px;line-height:1.6}
+  .note b{color:var(--ink-dim);font-weight:500}
+  code{font-family:var(--mono);background:#0b0e14;border:1px solid var(--line);padding:1px 5px;border-radius:4px;font-size:.92em;color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Retirement Stress Test</p>
+    <h1>Monte Carlo Retirement Simulator</h1>
+    <p class="sub">Runs thousands of randomized market paths against your plan to estimate the probability your money survives the full horizon — and shows how sequence-of-returns risk plays out across the good, the median, and the ugly scenarios.</p>
+  </header>
+
+  <div class="layout">
+    <!-- CONTROLS -->
+    <div class="panel controls">
+      <div class="group">
+        <p class="group-title">Today</p>
+        <label class="field">
+          <span class="lab">Current portfolio<span class="hint">invested</span></span>
+          <span class="inp"><span class="pre">$</span><input class="has-pre" id="balance" type="number" value="1700000" step="10000"></span>
+        </label>
+        <label class="field">
+          <span class="lab">Current age<span class="hint">for axis</span></span>
+          <input id="age" type="number" value="50" step="1">
+        </label>
+      </div>
+
+      <div class="group">
+        <p class="group-title">Accumulation</p>
+        <label class="field">
+          <span class="lab">Annual contributions</span>
+          <span class="inp"><span class="pre">$</span><input class="has-pre" id="contrib" type="number" value="70000" step="1000"></span>
+        </label>
+        <label class="field">
+          <span class="lab">Years until retirement</span>
+          <input id="yrsToRet" type="number" value="5" step="1">
+        </label>
+      </div>
+
+      <div class="group">
+        <p class="group-title">Retirement</p>
+        <label class="field">
+          <span class="lab">Annual spending<span class="hint">today's $</span></span>
+          <span class="inp"><span class="pre">$</span><input class="has-pre" id="spend" type="number" value="100000" step="1000"></span>
+        </label>
+        <label class="field">
+          <span class="lab">Years in retirement<span class="hint">horizon</span></span>
+          <input id="retYears" type="number" value="35" step="1">
+        </label>
+        <label class="field">
+          <span class="lab">Other income — SS, etc.<span class="hint">today's $</span></span>
+          <span class="inp"><span class="pre">$</span><input class="has-pre" id="otherInc" type="number" value="50000" step="1000"></span>
+        </label>
+        <label class="field">
+          <span class="lab">…starts in (years)<span class="hint">from now</span></span>
+          <input id="incStart" type="number" value="17" step="1">
+        </label>
+      </div>
+
+      <div class="group">
+        <p class="group-title">Market assumptions</p>
+        <label class="field">
+          <span class="lab">Allocation preset</span>
+          <select id="preset">
+            <option value="9.8,18.0">100% Stocks</option>
+            <option value="8.8,14.5">80 / 20</option>
+            <option value="8.2,12.8">70 / 30</option>
+            <option value="7.6,11.0" selected>60 / 40</option>
+            <option value="7.0,9.5">50 / 50</option>
+            <option value="6.4,8.0">40 / 60</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+        <div class="two">
+          <label class="field">
+            <span class="lab">Mean return</span>
+            <span class="inp"><input class="has-suf" id="mean" type="number" value="7.6" step="0.1"><span class="suf">%</span></span>
+          </label>
+          <label class="field">
+            <span class="lab">Volatility</span>
+            <span class="inp"><input class="has-suf" id="vol" type="number" value="11.0" step="0.1"><span class="suf">%</span></span>
+          </label>
+        </div>
+        <label class="field">
+          <span class="lab">Inflation</span>
+          <span class="inp"><input class="has-suf" id="infl" type="number" value="2.7" step="0.1"><span class="suf">%</span></span>
+        </label>
+      </div>
+
+      <div class="group">
+        <p class="group-title">Simulation</p>
+        <label class="field">
+          <span class="lab">Number of paths</span>
+          <input id="sims" type="number" value="5000" step="1000">
+        </label>
+        <button class="runbtn" id="run">Run Simulation</button>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="panel results">
+      <div class="verdict">
+        <div class="prob" id="probVal">—<small>success</small></div>
+        <div class="verdict-txt">
+          <div class="vt-lab">Verdict <span class="pill" id="pill" style="border-color:var(--line);color:var(--ink-dim)">—</span></div>
+          <div class="vt-msg" id="verdictMsg">Adjust the inputs and run a simulation to see how your plan holds up across thousands of possible market futures.</div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="s-lab">Median ending balance</div><div class="s-val" id="medEnd">—</div><div class="s-note">50th percentile, at horizon end</div></div>
+        <div class="stat"><div class="s-lab">Downside (10th pct)</div><div class="s-val" id="p10End">—</div><div class="s-note">1-in-10 worst outcome</div></div>
+        <div class="stat"><div class="s-lab">Money lasts (10th pct)</div><div class="s-val" id="yearsP10">—</div><div class="s-note">In the worst scenarios</div></div>
+      </div>
+
+      <div class="chart-block">
+        <div class="chart-head">
+          <div>
+            <div class="chart-title">Portfolio paths over time</div>
+            <div class="chart-sub">Shaded bands show the 10–90th and 25–75th percentile range of outcomes; the gold line is the median path.</div>
+          </div>
+          <div class="legend">
+            <span><i class="sw" style="background:var(--band-1)"></i>10–90%</span>
+            <span><i class="sw" style="background:var(--band-2)"></i>25–75%</span>
+            <span><i class="sw" style="background:var(--median);height:3px"></i>Median</span>
+          </div>
+        </div>
+        <canvas id="fan" height="380"></canvas>
+      </div>
+
+      <div class="chart-block">
+        <div class="chart-head">
+          <div>
+            <div class="chart-title">Distribution of outcomes</div>
+            <div class="chart-sub">Where every simulated path ends up. The red bar at zero is the share that ran out of money.</div>
+          </div>
+        </div>
+        <canvas id="hist" height="220"></canvas>
+      </div>
+
+      <p class="note" id="note"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const num = id => parseFloat($(id).value) || 0;
+
+// Standard normal via Box–Muller
+function randn(){
+  let u=0,v=0;
+  while(u===0) u=Math.random();
+  while(v===0) v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
+function pct(sortedArr,p){
+  if(sortedArr.length===0) return 0;
+  const idx=(sortedArr.length-1)*p;
+  const lo=Math.floor(idx), hi=Math.ceil(idx);
+  if(lo===hi) return sortedArr[lo];
+  return sortedArr[lo]+(sortedArr[hi]-sortedArr[lo])*(idx-lo);
+}
+
+function fmtMoney(v){
+  const neg=v<0; v=Math.abs(v);
+  let s;
+  if(v>=1e6) s='$'+(v/1e6).toFixed(v>=1e7?1:2)+'M';
+  else if(v>=1e3) s='$'+Math.round(v/1e3)+'K';
+  else s='$'+Math.round(v);
+  return (neg?'-':'')+s;
+}
+
+/* ---------- core simulation ---------- */
+function simulate(p){
+  // Calibrate a lognormal annual growth factor so its arithmetic mean = 1+mean
+  // and variance matches the requested volatility.
+  const m=p.mean, s=p.vol;
+  const onePlusM=1+m;
+  const sigmaLog=Math.sqrt(Math.log(1+(s*s)/(onePlusM*onePlusM)));
+  const muLog=Math.log(onePlusM)-0.5*sigmaLog*sigmaLog;
+
+  const T=p.yrsToRet+p.retYears;
+  const trajectories=new Array(T+1);          // per-year arrays of balances across sims
+  for(let t=0;t<=T;t++) trajectories[t]=new Float64Array(p.sims);
+
+  const endBalances=new Float64Array(p.sims);
+  const yearsLasted=new Float64Array(p.sims);
+  let successes=0;
+
+  for(let i=0;i<p.sims;i++){
+    let bal=p.balance;
+    trajectories[0][i]=bal;
+    let failed=false, failYear=p.retYears;
+
+    for(let t=1;t<=T;t++){
+      const growth=Math.exp(muLog+sigmaLog*randn());
+      const inAccum = t<=p.yrsToRet;
+
+      if(inAccum){
+        bal=bal*growth+p.contrib;
+      }else{
+        const offset=t-1;                       // years from now
+        const inflF=Math.pow(1+p.infl,offset);
+        const spend=p.spend*inflF;
+        const income=(offset>=p.incStart)?p.otherInc*inflF:0;
+        const net=spend-income;                 // negative net = surplus reinvested
+        bal-=net;
+        if(bal<0 && !failed){
+          failed=true;
+          failYear=t-p.yrsToRet;                // retirement-year index of failure
+          bal=0;
+        }
+        if(bal>0) bal*=growth;
+      }
+      if(bal<0) bal=0;
+      trajectories[t][i]=bal;
+    }
+    endBalances[i]=bal;
+    if(!failed){ successes++; yearsLasted[i]=p.retYears; }
+    else yearsLasted[i]=failYear;
+  }
+
+  // Percentile bands per year
+  const bands={p10:[],p25:[],p50:[],p75:[],p90:[]};
+  for(let t=0;t<=T;t++){
+    const col=Array.from(trajectories[t]).sort((a,b)=>a-b);
+    bands.p10.push(pct(col,0.10));
+    bands.p25.push(pct(col,0.25));
+    bands.p50.push(pct(col,0.50));
+    bands.p75.push(pct(col,0.75));
+    bands.p90.push(pct(col,0.90));
+  }
+
+  const endSorted=Array.from(endBalances).sort((a,b)=>a-b);
+  const yearsSorted=Array.from(yearsLasted).sort((a,b)=>a-b);
+
+  return {
+    successRate:successes/p.sims,
+    medianEnd:pct(endSorted,0.50),
+    p10End:pct(endSorted,0.10),
+    p90End:pct(endSorted,0.90),
+    yearsP10:pct(yearsSorted,0.10),
+    bands, endBalances, T, params:p
+  };
+}
+
+/* ---------- chart: fan ---------- */
+function drawFan(r){
+  const cv=$('fan'), dpr=window.devicePixelRatio||1;
+  const W=cv.clientWidth, H=380;
+  cv.width=W*dpr; cv.height=H*dpr;
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+
+  const padL=58,padR=14,padT=16,padB=30;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const T=r.T, p=r.params;
+
+  const maxY=Math.max(...r.bands.p90,1)*1.05;
+  const x=t=>padL+(t/T)*plotW;
+  const y=v=>padT+plotH-(v/maxY)*plotH;
+
+  // gridlines + y labels
+  ctx.font='11px "JetBrains Mono",monospace';
+  ctx.textBaseline='middle';
+  const ticks=5;
+  for(let i=0;i<=ticks;i++){
+    const v=maxY*i/ticks, yy=y(v);
+    ctx.strokeStyle='#1a2030'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(padL,yy); ctx.lineTo(W-padR,yy); ctx.stroke();
+    ctx.fillStyle='#5d6a82'; ctx.textAlign='right';
+    ctx.fillText(fmtMoney(v),padL-8,yy);
+  }
+
+  // retirement marker
+  const rx=x(p.yrsToRet);
+  ctx.setLineDash([4,4]); ctx.strokeStyle='#7a6230'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(rx,padT); ctx.lineTo(rx,padT+plotH); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#e0b35c'; ctx.textAlign='center';
+  ctx.fillText('retire',rx,padT+6);
+
+  // x labels (ages)
+  ctx.fillStyle='#5d6a82'; ctx.textAlign='center'; ctx.textBaseline='top';
+  const xstep=Math.ceil(T/8);
+  for(let t=0;t<=T;t+=xstep){
+    ctx.fillText(p.age+t, x(t), padT+plotH+8);
+  }
+
+  const fill=(top,bot,color)=>{
+    ctx.beginPath();
+    ctx.moveTo(x(0),y(top[0]));
+    for(let t=1;t<=T;t++) ctx.lineTo(x(t),y(top[t]));
+    for(let t=T;t>=0;t--) ctx.lineTo(x(t),y(bot[t]));
+    ctx.closePath(); ctx.fillStyle=color; ctx.fill();
+  };
+  fill(r.bands.p90,r.bands.p10,'rgba(224,179,92,.08)');
+  fill(r.bands.p75,r.bands.p25,'rgba(224,179,92,.16)');
+
+  // median line
+  ctx.beginPath();
+  for(let t=0;t<=T;t++){ const xx=x(t),yy=y(r.bands.p50[t]); t===0?ctx.moveTo(xx,yy):ctx.lineTo(xx,yy); }
+  ctx.strokeStyle='#e0b35c'; ctx.lineWidth=2; ctx.stroke();
+}
+
+/* ---------- chart: histogram ---------- */
+function drawHist(r){
+  const cv=$('hist'), dpr=window.devicePixelRatio||1;
+  const W=cv.clientWidth, H=220;
+  cv.width=W*dpr; cv.height=H*dpr;
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+
+  const padL=58,padR=14,padT=14,padB=30;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+
+  const data=Array.from(r.endBalances);
+  const failCount=data.filter(v=>v<=0).length;
+  const positives=data.filter(v=>v>0);
+  const maxV=positives.length?Math.max(...positives):1;
+  const cap=r.p90End>0?r.p90End*1.4:maxV;            // cap axis so a few huge paths don't flatten everything
+  const nbins=28;
+  const bins=new Array(nbins).fill(0);
+  positives.forEach(v=>{
+    let idx=Math.floor((v/cap)*nbins);
+    if(idx>=nbins) idx=nbins-1; if(idx<0) idx=0;
+    bins[idx]++;
+  });
+  const maxCount=Math.max(failCount,...bins,1);
+  const barW=plotW/(nbins+1);
+  const by=c=>padT+plotH-(c/maxCount)*plotH;
+
+  // baseline
+  ctx.strokeStyle='#1a2030'; ctx.beginPath();
+  ctx.moveTo(padL,padT+plotH); ctx.lineTo(W-padR,padT+plotH); ctx.stroke();
+
+  // fail bar
+  let bx=padL;
+  ctx.fillStyle='#d96b6b';
+  ctx.fillRect(bx+2,by(failCount),barW-3,padT+plotH-by(failCount));
+
+  // success bins
+  for(let i=0;i<nbins;i++){
+    bx=padL+(i+1)*barW;
+    ctx.fillStyle='#3a6b54';
+    ctx.fillRect(bx+2,by(bins[i]),barW-3,padT+plotH-by(bins[i]));
+  }
+
+  // x labels
+  ctx.font='11px "JetBrains Mono",monospace'; ctx.fillStyle='#5d6a82';
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillStyle='#d96b6b'; ctx.fillText('ran out', padL+barW/2+2, padT+plotH+8);
+  ctx.fillStyle='#5d6a82';
+  for(let f=0.25;f<=1;f+=0.25){
+    const i=Math.round(f*nbins);
+    const bxx=padL+(i+0.5)*barW;
+    ctx.fillText(fmtMoney(cap*f), bxx, padT+plotH+8);
+  }
+}
+
+/* ---------- run + render ---------- */
+function run(){
+  const p={
+    balance:num('balance'), age:num('age'),
+    contrib:num('contrib'), yrsToRet:Math.max(0,Math.round(num('yrsToRet'))),
+    spend:num('spend'), retYears:Math.max(1,Math.round(num('retYears'))),
+    otherInc:num('otherInc'), incStart:Math.max(0,Math.round(num('incStart'))),
+    mean:num('mean')/100, vol:num('vol')/100, infl:num('infl')/100,
+    sims:Math.min(50000,Math.max(500,Math.round(num('sims'))))
+  };
+  const r=simulate(p);
+
+  // verdict
+  const sr=r.successRate;
+  $('probVal').innerHTML=Math.round(sr*100)+'<small>success</small>';
+  const probEl=$('probVal');
+  let color,label,labColor,msg;
+  if(sr>=0.90){color='var(--good)';label='STRONG';labColor='var(--good)';
+    msg='Your plan holds up across the large majority of market scenarios. The main risk is a poor sequence of early returns — keep a cash buffer so you never sell into a crash.';}
+  else if(sr>=0.75){color='var(--gold)';label='WORKABLE';labColor='var(--gold)';
+    msg='Reasonable odds, but with meaningful tail risk. Small levers — trimming spending, working part-time a few years, or adding a cash bucket — push this toward safety.';}
+  else if(sr>=0.55){color='var(--warn)';label='FRAGILE';labColor='var(--warn)';
+    msg='This plan fails in a large share of futures. Consider lower spending, more guaranteed income, a later start, or a de-risked glide path into retirement.';}
+  else{color='var(--bad)';label='AT RISK';labColor='var(--bad)';
+    msg='The money runs out in most scenarios as configured. Spending, time horizon, or income likely need to change before this is viable.';}
+  probEl.style.color=color;
+  const pill=$('pill'); pill.textContent=label; pill.style.color=labColor; pill.style.borderColor=labColor;
+  $('verdictMsg').textContent=msg;
+
+  $('medEnd').textContent=fmtMoney(r.medianEnd);
+  $('p10End').textContent=fmtMoney(r.p10End);
+  $('yearsP10').textContent=Math.floor(r.yearsP10)+' yrs';
+  $('yearsP10').nextElementSibling.textContent='≈ age '+(p.age+p.yrsToRet+Math.floor(r.yearsP10));
+
+  drawFan(r); drawHist(r);
+
+  $('note').innerHTML='<b>How to read this:</b> Each of '+p.sims.toLocaleString()+
+    ' paths draws a fresh random market return every year from a log-normal distribution '+
+    '(arithmetic mean '+(p.mean*100).toFixed(1)+'%, volatility '+(p.vol*100).toFixed(1)+'%). '+
+    'Spending and income grow with inflation; success means the portfolio never hits zero through all '+p.retYears+
+    ' retirement years. &nbsp;<b>Caveats:</b> returns are illustrative long-run assumptions — forward returns may be lower, '+
+    'and real markets show fat tails and serial correlation this simple model does not. Withdrawals are pre-tax; '+
+    'model your effective tax rate by raising the spending figure. Not financial advice.';
+}
+
+/* preset wiring */
+$('preset').addEventListener('change',e=>{
+  if(e.target.value==='custom') return;
+  const [m,v]=e.target.value.split(',');
+  $('mean').value=m; $('vol').value=v; run();
+});
+['mean','vol'].forEach(id=>$(id).addEventListener('input',()=>$('preset').value='custom'));
+$('run').addEventListener('click',run);
+document.querySelectorAll('input').forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')run();}));
+window.addEventListener('resize',()=>{if(window._last)run();});
+window._last=true;
+run();
+</script>
+</body>
+</html>
