@@ -202,7 +202,7 @@ const PROFILE_DEFAULTS = {
   hName:'', wName:'',
   hCur:null, hRet:null, hSSA:null, hSSB:null, hInc:null, h401e:null, h401f:null,
   wCur:null, wRet:null, wSSA:null, wSSB:null, wInc:null, w401e:null, w401f:null,
-  exp:10000, wdr:5, inf:2.5, yrs:35, balance:null
+  exp:null, wdr:null, inf:null, yrs:null, balance:null
 };
 let P = {...PROFILE_DEFAULTS};
 
@@ -306,7 +306,7 @@ function renderSidebar() {
     <!-- Person 1 -->
     <div class="sb-sec">
       <div class="sb-sec-head" id="sb-h1-head">${P.hName||'Person 1'}</div>
-      ${pTxt('Name','hName','e.g. Bill')}
+      ${pTxt('Name','hName','')}
       <div class="sb-2col">
         ${pNum('Current age','hCur',{min:20,max:85,ph:'e.g. 50'})}
         ${pNum('Retire at age','hRet',{min:20,max:85,ph:'e.g. 56'})}
@@ -323,7 +323,7 @@ function renderSidebar() {
     <!-- Person 2 -->
     <div class="sb-sec">
       <div class="sb-sec-head" id="sb-h2-head">${P.wName||'Person 2'}</div>
-      ${pTxt('Name','wName','e.g. Jane')}
+      ${pTxt('Name','wName','')}
       <div class="sb-2col">
         ${pNum('Current age','wCur',{min:20,max:85,ph:'e.g. 52'})}
         ${pNum('Retire at age','wRet',{min:20,max:85,ph:'e.g. 58'})}
@@ -340,12 +340,12 @@ function renderSidebar() {
     <!-- Shared Assumptions -->
     <div class="sb-sec">
       <div class="sb-sec-head">Shared Assumptions</div>
-      ${pNum('Monthly expenses','exp',{pre:'$',ph:'10000'})}
+      ${pNum('Monthly expenses','exp',{pre:'$',ph:''})}
       <div class="sb-2col">
-        ${pNum('Withdrawal rate','wdr',{min:1,max:15,suf:'%',ph:'5'})}
-        ${pNum('Inflation','inf',{min:0,max:10,suf:'%',ph:'2.5'})}
+        ${pNum('Withdrawal rate','wdr',{min:1,max:15,suf:'%',ph:''})}
+        ${pNum('Inflation','inf',{min:0,max:10,suf:'%',ph:''})}
       </div>
-      ${pNum('Projection years','yrs',{min:10,max:60,ph:'35'})}
+      ${pNum('Projection years','yrs',{min:10,max:60,ph:''})}
       ${pNum('Portfolio balance','balance',{pre:'$',ph:'total invested assets'})}
     </div>
 
@@ -382,7 +382,7 @@ function renderSidebar() {
     <div class="sb-sec">
       <div class="sb-sec-head" style="margin-bottom:4px">From Profile</div>
       <div class="fp-card"><div id="fp-inner">${fpInnerHTML()}</div></div>
-      ${mcNum('Annual contributions','contrib',{pre:'$',step:1000,ph:'0'})}
+      ${mcNum('Annual contributions','contrib',{pre:'$',step:1000,ph:''})}
     </div>
     <div class="sb-sec">
       <div class="sb-sec-head">Market Assumptions</div>
@@ -402,7 +402,7 @@ function renderSidebar() {
         ${mcNum('Mean return','mean',{suf:'%',step:0.1})}
         ${mcNum('Volatility','vol',{suf:'%',step:0.1})}
       </div>
-      ${mcNum('Inflation','infl',{suf:'%',step:0.1,ph:(P.inf||2.5)+''})}
+      ${mcNum('Inflation','infl',{suf:'%',step:0.1,ph:''})}
       ${mcNum('Simulations','sims',{min:500,max:50000,step:500})}
       <button class="sb-run" onclick="runMC()">Run Simulation</button>
     </div>
@@ -626,7 +626,7 @@ function removeScenario() {
 /* ═══════════════════════════════════════════════
    MONTE CARLO SIMULATOR
    ═══════════════════════════════════════════════ */
-let MC = { contrib:0, mean:7.6, vol:11.0, infl:2.5, preset:'7.6,11.0', sims:5000 };
+let MC = { contrib:null, mean:7.6, vol:11.0, infl:null, preset:'7.6,11.0', sims:5000 };
 
 function getMCParams() {
   const yrsToRet = (P.hCur&&P.hRet) ? Math.max(0,P.hRet-P.hCur) : 6;
