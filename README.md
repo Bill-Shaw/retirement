@@ -1,5 +1,7 @@
 # Retirement Planning Suite
 
+Most retirement calculators assume you can't touch your 401k until age 59½. This tool was built to address that gap — specifically to model the **Rule of 55**, which allows penalty-free 401k withdrawals starting the year you turn 55 if you've left your employer. The cash flow calculator accounts for this by using a separate "401k at retirement" balance during the 55–59½ window, then stepping up to your full account balance once you reach 59½.
+
 A self-contained, single-file retirement planning toolkit that runs entirely in your browser — no server, no install, no data sent anywhere.
 
 ---
