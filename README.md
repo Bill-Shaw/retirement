@@ -16,13 +16,28 @@ Open `retirement-suite.html` directly in any modern browser to get started.
 
 ---
 
-## Retirement Suite (`retirement-suite.html`)
+## Layout
 
-The suite merges both tools into one app with a **Shared Profile** at the top. Fill in your information once and apply it to any tool — no re-entering the same numbers.
+The app uses a **persistent dark sidebar** on the left and a **results-only main area** on the right.
+
+**Sidebar** (always visible):
+- Tool switcher tabs at the top — **Cash Flow** and **Monte Carlo**
+- **Person 1** and **Person 2** sections with all person-specific inputs
+- **Shared Assumptions** (expenses, withdrawal rate, inflation, projection years, portfolio balance)
+- A divider below the shared fields showing tool-specific settings that change when you switch tabs
+- Export / Import buttons at the bottom
+
+**Main area**: projections and charts only — no inputs.
+
+Enter your information once in the sidebar. Both tools read from the same profile automatically — no Apply buttons, no re-entering the same numbers.
+
+---
+
+## Retirement Suite (`retirement-suite.html`)
 
 ### Shared Profile
 
-The collapsible panel at the top holds all common inputs:
+All common inputs live in the persistent sidebar:
 
 **Person 1 & Person 2**
 - Name, current age, retirement age
@@ -38,15 +53,13 @@ The collapsible panel at the top holds all common inputs:
 | Withdrawal rate | Annual % drawn from retirement accounts |
 | Inflation rate | Annual CPI assumption |
 | Projection years | How many years to project forward |
-| Total portfolio balance | Total invested assets (used by Monte Carlo) |
-
-Once filled in, click **Apply to Cash Flow →** or **Apply to Monte Carlo →** to push the values into each tool. The profile summary line (e.g. *Bill (50) · Jane (52) · $10k/mo exp · $2.00M portfolio*) updates in real time as you type.
+| Portfolio balance | Total invested assets (used by Monte Carlo) |
 
 ---
 
 ### Tool 1 — Cash Flow Calculator
 
-Projects year-by-year household income vs. expenses across the full horizon.
+Projects year-by-year household income vs. expenses across the full horizon. Switches to automatically when you enter person ages.
 
 **What it models**
 - Work income for each person (stops at their retirement age, optionally inflated with CPI)
@@ -58,16 +71,17 @@ Projects year-by-year household income vs. expenses across the full horizon.
 - **Metrics bar** — current-year income gap, break-even year, total projected shortfall, end-of-horizon gap
 - **Cash flow chart** — stacked bar chart of income sources vs. the expense line
 - **Surplus / shortfall chart** — year-by-year surpluses (green) and deficits (red)
-- **Year-by-year detail table** — every income source, expense, and gap for each calendar year, with deficit rows highlighted
+- **Year-by-year detail table** — every income source, expense, and gap for each calendar year
 
 **Scenarios**
 
-Run multiple what-if comparisons side by side. Use **+ Copy** to duplicate the current scenario and adjust individual assumptions (e.g. different retirement ages or withdrawal rates) without losing your baseline. Use the scenario bar to switch between them.
+Run multiple what-if comparisons side by side. Use **+ Copy** to duplicate the current scenario. The **Scenario Overrides** section in the sidebar lets you adjust individual assumptions per-scenario (withdrawal rate, inflation, projection years, expenses) — leave a field blank to inherit the shared value.
 
 **Tool-specific settings** (per scenario, in the sidebar)
-- Withdrawal rate
-- Inflation rate
-- Projection years
+- Withdrawal rate override
+- Inflation rate override
+- Projection years override
+- Monthly expenses override
 - Inflate work income with CPI (toggle)
 - Inflate 401k withdrawals with CPI — aggressive option (toggle)
 
@@ -82,29 +96,27 @@ Stress-tests your retirement portfolio across thousands of randomized market pat
 - **Retirement phase** — portfolio funds inflation-adjusted spending net of other income
 - Returns drawn from a log-normal distribution calibrated to your mean return and volatility inputs
 
-**Sidebar inputs**
+The simulator automatically derives its parameters from your shared profile:
+
+| Derived from profile | How |
+|---------------------|-----|
+| Portfolio balance | From Shared Assumptions |
+| Current age | From Person 1 current age |
+| Annual spending | Monthly expenses × 12 |
+| Years to retirement | Person 1 retire age − current age |
+| Retirement years | Projection years − years to retirement |
+| Other income (SS) | Combined SS benefits × 12 |
+| SS start | Earlier of Person 1 / Person 2 claim age |
+
+**Monte Carlo-specific settings** (in the sidebar when on this tab)
 
 | Field | Notes |
 |-------|-------|
-| Current portfolio | Total invested assets |
-| Current age | Used to label the x-axis |
-| Annual contributions | Added each year during accumulation |
-| Years until retirement | Length of the accumulation phase |
-| Annual spending | Today's dollars; grows with inflation in retirement |
-| Years in retirement | Planning horizon after stopping work |
-| Other income (SS, etc.) | Today's dollars; grows with inflation |
-| …starts in (years) | Years from now until that income begins |
+| Annual contributions | Added each year during the accumulation phase |
 | Allocation preset | Sets mean return + volatility; or choose Custom |
 | Mean return / Volatility | Arithmetic annual figures |
-| Inflation | Applied to spending and income |
+| Inflation | Applied to spending and income during retirement |
 | Number of paths | 500 – 50,000 simulations |
-
-When applying from the Shared Profile, the tool auto-derives:
-- **Spending** from monthly expenses × 12
-- **Years to retirement** from Person 1's retirement age minus current age
-- **Retirement years** from projection years minus years to retirement
-- **Other income** from combined SS benefits × 12
-- **SS start** from the earlier of the two SS claim ages
 
 **Outputs**
 - **Success rate** — % of paths where the portfolio never hits zero
@@ -113,13 +125,13 @@ When applying from the Shared Profile, the tool auto-derives:
 - **Fan chart** — 10–90th and 25–75th percentile bands with the median path highlighted; dashed line marks retirement
 - **Histogram** — distribution of all final portfolio values; red bar = ran out of money
 
-Click **Run Simulation** (or press Enter in any input) to run. Each run draws fresh random paths.
+Click **Run Simulation** to run. Each run draws fresh random paths.
 
 ---
 
 ## Export & Import
 
-The **Export JSON** / **Import JSON** buttons in the top-right header save and restore your entire session — shared profile, all calculator scenarios, and Monte Carlo settings — as a single `.json` file.
+The **Export JSON** / **Import JSON** buttons at the bottom of the sidebar save and restore your entire session — shared profile, all calculator scenarios, and Monte Carlo settings — as a single `.json` file.
 
 Your data is also automatically saved to `localStorage` in your browser and persists between sessions on the same machine.
 
@@ -127,26 +139,23 @@ Your data is also automatically saved to `localStorage` in your browser and pers
 
 ## Adding a New Tool
 
-The suite is built to be extended. To add a new tool:
+The suite is designed to be extended. To add a new tool:
 
-1. **Add a tab button** in the `<!-- TOOL TABS -->` section:
+1. **Add a tab button** in the sidebar head section:
    ```html
-   <button class="tool-tab" id="tab-mytool" onclick="switchTool('mytool')">My Tool</button>
+   <button class="sb-tab" id="sb-tab-mytool" onclick="switchTool('mytool')">My Tool</button>
    ```
 
-2. **Add a tool panel** below the existing panels:
+2. **Add a tool panel** in the main area:
    ```html
-   <div id="tool-mytool" class="tool-panel">
-     <div class="tool-layout">
-       <div class="sidebar" id="mytool-sidebar"></div>
-       <div class="main" id="mytool-main"></div>
-     </div>
+   <div class="tool-main" id="tm-mytool">
+     <div class="results" id="mytool-main"></div>
    </div>
    ```
 
-3. **Write your logic** — prefix all functions and element IDs with your tool name to avoid collisions. Read shared values from the profile object `P`.
+3. **Add a sidebar section** in `renderSidebar()` for `activeTool === 'mytool'` — read shared values from `P` directly.
 
-4. **Call your render function** from `init()` at the bottom of the script.
+4. **Write your render function** — prefix all IDs with your tool name to avoid collisions. Call it from `init()`.
 
 **Shared profile object `P`** exposes:
 `hName`, `wName`, `hCur`, `hRet`, `hSSA`, `hSSB`, `hInc`, `h401e`, `h401f`,
