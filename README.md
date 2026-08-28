@@ -4,14 +4,6 @@ A self-contained, single-file retirement planning toolkit that runs entirely in 
 
 ---
 
-## Files
-
-| File | Description |
-|------|-------------|
-| `retirement-suite.html` | **Unified app — use this one** |
-| `retirement-calculator.html` | Original standalone cash flow calculator |
-| `montecarlo-retirement.html` | Original standalone Monte Carlo simulator |
-
 Open `retirement-suite.html` directly in any modern browser to get started.
 
 ---
