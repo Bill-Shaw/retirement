@@ -355,17 +355,9 @@ function renderSidebar() {
     </div>
 
     ${activeTool === 'calc' ? `
-    <!-- Calc: scenario overrides -->
+    <!-- Calc: options -->
     <div class="sb-sec">
-      <div class="sb-sec-head" style="color:#4A4845">Scenario Overrides</div>
-      <div style="font-size:10px;color:#3A3937;margin-top:-4px">Leave blank to inherit shared value</div>
-      <div class="sb-2col">
-        ${ovrNum('Withdrawal rate','wdr',{min:1,max:15,suf:'%'})}
-        ${ovrNum('Inflation','inf',{min:0,max:10,suf:'%'})}
-      </div>
-      ${ovrNum('Projection years','yrs',{min:10,max:60})}
-      ${ovrNum('Monthly expenses','exp',{pre:'$'})}
-      <div style="display:flex;flex-direction:column;gap:5px;margin-top:2px;padding-top:8px;border-top:1px solid #242426">
+      <div style="display:flex;flex-direction:column;gap:5px">
         <label class="sb-check">
           <input type="checkbox" ${s.inflWork?'checked':''} onchange="updOvr('inflWork',this.checked)">
           Inflate work income with CPI
@@ -416,7 +408,7 @@ function renderSidebar() {
 const CC = {hWork:'#378ADD',wWork:'#85B7EB',h401:'#1D9E75',w401:'#5DCAA5',hSS:'#EF9F27',wSS:'#FAC775',exp:'#E24B4A'};
 
 function defScenario(n='Scenario 1') {
-  return { name:n, wdr:null, inf:null, yrs:null, exp:null, inflWork:true, infl401k:false };
+  return { name:n, inflWork:true, infl401k:false };
 }
 
 let scenarios = [defScenario()], activeScenario = 0, calcTab = 'cashflow';
@@ -426,10 +418,10 @@ function calcReady() { return (P.hCur>0&&P.hRet>0)||(P.wCur>0&&P.wRet>0); }
 
 function eff(s) {
   return {
-    wdr:  s.wdr  !== null ? s.wdr  : (P.wdr  || 5),
-    inf:  s.inf  !== null ? s.inf  : (P.inf  || 2.5),
-    yrs:  s.yrs  !== null ? s.yrs  : (P.yrs  || 35),
-    exp:  s.exp  !== null ? s.exp  : (P.exp  || 10000),
+    wdr:  P.wdr  || 5,
+    inf:  P.inf  || 2.5,
+    yrs:  P.yrs  || 35,
+    exp:  P.exp  || 10000,
     inflWork: s.inflWork, infl401k: s.infl401k
   };
 }
