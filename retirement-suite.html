@@ -175,6 +175,7 @@ canvas{display:block;width:100%}
     <button class="sb-btn" onclick="exportAll()">Export JSON</button>
     <button class="sb-btn" onclick="document.getElementById('import-file').click()">Import JSON</button>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importAll(this)">
+    <button class="sb-btn danger" onclick="clearAll()" style="margin-top:4px;width:100%">Clear All Data</button>
   </div>
 </aside>
 
@@ -1153,6 +1154,17 @@ function exportAll() {
   const u=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=u;a.download='retirement-plan.json';a.click();URL.revokeObjectURL(u);
 }
+function clearAll() {
+  if (!confirm('Clear all saved data? This cannot be undone.')) return;
+  localStorage.removeItem('retirement-suite-v2');
+  localStorage.removeItem('retirement-suite-v1');
+  P = {...PROFILE_DEFAULTS};
+  BG = {...BG_DEFAULTS};
+  MC = {h401k:null,hMatch:null,hHSA:null,w401k:null,wMatch:null,wHSA:null,mean:7.6,vol:11.0,infl:null,preset:'7.6,11.0',sims:5000};
+  scenarios = [defScenario()]; activeScenario = 0;
+  init();
+}
+
 function importAll(input) {
   const f=input.files[0];if(!f)return;
   const reader=new FileReader();
