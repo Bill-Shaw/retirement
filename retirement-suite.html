@@ -663,7 +663,7 @@ function simulate(p) {
       const g=Math.exp(muL+sigL*randn());
       if(t<=p.yrsToRet){bal=bal*g+p.contrib;}
       else{
-        const off=t-1,iF=Math.pow(1+p.infl/100,off);
+        const off=t-p.yrsToRet-1,iF=Math.pow(1+p.infl/100,off);
         bal-=p.spend*iF-(off>=p.incStart?p.otherInc*iF:0);
         if(bal<0&&!failed){failed=true;failYear=t-p.yrsToRet;bal=0;}
         if(bal>0)bal*=g;
