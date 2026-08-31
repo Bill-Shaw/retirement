@@ -374,7 +374,26 @@ function renderSidebar() {
     <div class="sb-sec">
       <div class="sb-sec-head" style="margin-bottom:4px">From Profile</div>
       <div class="fp-card"><div id="fp-inner">${fpInnerHTML()}</div></div>
-      ${mcNum('Annual contributions','contrib',{pre:'$',step:1000,ph:''})}
+    </div>
+    <div class="sb-sec">
+      <div class="sb-sec-head">Contributions</div>
+      ${(()=>{
+        const h1Note = (P.hCur&&P.hRet) ? (P.hRet>P.hCur ? ` · ${P.hRet-P.hCur} yrs left` : ' · retired') : '';
+        const h2Note = (P.wCur&&P.wRet) ? (P.wRet>P.wCur ? ` · ${P.wRet-P.wCur} yrs left` : ' · retired') : '';
+        return `
+      <div style="font-size:10px;font-weight:600;color:#5A5855;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${P.hName||'Person 1'}${h1Note}</div>
+      <div class="sb-2col">
+        ${mcNum('401k','h401k',{pre:'$',step:500,ph:''})}
+        ${mcNum('Employer match','hMatch',{pre:'$',step:100,ph:''})}
+      </div>
+      ${mcNum('HSA','hHSA',{pre:'$',step:100,ph:''})}
+      <div style="font-size:10px;font-weight:600;color:#5A5855;text-transform:uppercase;letter-spacing:.06em;margin-top:8px;margin-bottom:4px">${P.wName||'Person 2'}${h2Note}</div>
+      <div class="sb-2col">
+        ${mcNum('401k','w401k',{pre:'$',step:500,ph:''})}
+        ${mcNum('Employer match','wMatch',{pre:'$',step:100,ph:''})}
+      </div>
+      ${mcNum('HSA','wHSA',{pre:'$',step:100,ph:''})}`;
+      })()}
     </div>
     <div class="sb-sec">
       <div class="sb-sec-head">Market Assumptions</div>
@@ -618,16 +637,24 @@ function removeScenario() {
 /* ═══════════════════════════════════════════════
    MONTE CARLO SIMULATOR
    ═══════════════════════════════════════════════ */
-let MC = { contrib:null, mean:7.6, vol:11.0, infl:null, preset:'7.6,11.0', sims:5000 };
+let MC = {
+  h401k:null, hMatch:null, hHSA:null,
+  w401k:null, wMatch:null, wHSA:null,
+  mean:7.6, vol:11.0, infl:null, preset:'7.6,11.0', sims:5000
+};
 
 function getMCParams() {
   const yrsToRet = (P.hCur&&P.hRet) ? Math.max(0,P.hRet-P.hCur) : 6;
   const retYears = (P.yrs&&P.hCur&&P.hRet) ? Math.max(1,P.yrs-(P.hRet-P.hCur)) : 29;
   const ssStart = Math.min(P.hSSA||999, P.wSSA||999);
   const incStart = (ssStart<999&&P.hCur) ? Math.max(0,ssStart-P.hCur) : yrsToRet;
+  const p1Contrib = (MC.h401k||0)+(MC.hMatch||0)+(MC.hHSA||0);
+  const p2Contrib = (MC.w401k||0)+(MC.wMatch||0)+(MC.wHSA||0);
+  const p1YrsWorking = (P.hCur&&P.hRet) ? Math.max(0,P.hRet-P.hCur) : 0;
+  const p2YrsWorking = (P.wCur&&P.wRet) ? Math.max(0,P.wRet-P.wCur) : 0;
   return {
     balance: P.balance||0, age: P.hCur||50,
-    contrib: MC.contrib||0,
+    p1Contrib, p2Contrib, p1YrsWorking, p2YrsWorking,
     spend: (P.exp||10000)*12,
     otherInc: ((P.hSSB||0)+(P.wSSB||0))*12,
     incStart, infl: P.inf||MC.infl||2.5,
@@ -661,10 +688,12 @@ function simulate(p) {
     let failed=false,failYear=p.retYears;
     for(let t=1;t<=T;t++){
       const g=Math.exp(muL+sigL*randn());
-      if(t<=p.yrsToRet){bal=bal*g+p.contrib;}
+      const contrib=(t<=p.p1YrsWorking?p.p1Contrib:0)+(t<=p.p2YrsWorking?p.p2Contrib:0);
+      if(t<=p.yrsToRet){bal=bal*g+contrib;}
       else{
         const off=t-p.yrsToRet-1,iF=Math.pow(1+p.infl/100,off);
-        bal-=p.spend*iF-(off>=p.incStart?p.otherInc*iF:0);
+        const netDraw=p.spend*iF-(off>=p.incStart?p.otherInc*iF:0)-contrib;
+        bal-=netDraw;
         if(bal<0&&!failed){failed=true;failYear=t-p.yrsToRet;bal=0;}
         if(bal>0)bal*=g;
       }
@@ -857,8 +886,10 @@ function loadState() {
     }
     if(typeof d.activeScenario==='number') activeScenario=Math.max(0,Math.min(d.activeScenario,scenarios.length-1));
     if(d.MC) MC=Object.assign({},MC,{
-      contrib:d.MC.contrib||0,mean:d.MC.mean||7.6,vol:d.MC.vol||11.0,
-      infl:d.MC.infl||2.5,preset:d.MC.preset||'7.6,11.0',sims:d.MC.sims||5000
+      h401k:d.MC.h401k||(d.MC.contrib||null), hMatch:d.MC.hMatch||null, hHSA:d.MC.hHSA||null,
+      w401k:d.MC.w401k||null, wMatch:d.MC.wMatch||null, wHSA:d.MC.wHSA||null,
+      mean:d.MC.mean||7.6,vol:d.MC.vol||11.0,
+      infl:d.MC.infl||null,preset:d.MC.preset||'7.6,11.0',sims:d.MC.sims||5000
     });
     saveState();
   } catch(e){}
