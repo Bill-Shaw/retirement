@@ -133,6 +133,21 @@ tr:hover td{background:#f8f8f5}
 .footer-note{font-size:11px;color:#aaa;text-align:center;padding:4px 0}
 canvas{display:block;width:100%}
 
+.bud-group-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.08)}
+.bud-table{width:100%;border-collapse:collapse;font-size:13px}
+.bud-table th{text-align:left;padding:6px 8px 6px 0;font-weight:600;color:#555;border-bottom:2px solid #E0DFD8}
+.bud-table th:not(:first-child){text-align:right}
+.bud-table td{padding:4px 0;color:#444;border-bottom:1px solid #F0EFE8}
+.bud-table td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums;font-family:ui-monospace,monospace}
+.bud-table tr.bud-group-row td{padding:10px 0 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:none;color:#888}
+.bud-table tr.bud-group-row td:first-child{padding-left:0}
+.bud-table td.bud-indent{padding-left:10px}
+.bud-table tr.bud-subtotal td{font-weight:600;border-top:1px solid #DDD;border-bottom:2px solid #DDD;color:#333}
+.bud-table tr.bud-grand td{font-weight:700;border-top:2px solid #999;color:#111}
+.bud-sync-note{font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #E0DFD8}
+.bud-sync-btn{font-size:11px;padding:4px 10px;border-radius:5px;border:1px solid #CCC;background:#F5F5F0;cursor:pointer;white-space:nowrap;color:#444}
+.bud-sync-btn:hover{background:#E8E7E0}
+
 @media(max-width:800px){
   .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
   .sidebar{height:auto;max-height:45vh}
@@ -152,6 +167,7 @@ canvas{display:block;width:100%}
     <div class="sb-tabs">
       <button class="sb-tab active" id="sb-tab-calc" onclick="switchTool('calc')">Cash Flow</button>
       <button class="sb-tab" id="sb-tab-mc" onclick="switchTool('mc')">Monte Carlo</button>
+      <button class="sb-tab" id="sb-tab-budget" onclick="switchTool('budget')">Budget</button>
     </div>
   </div>
   <div class="sb-scroll" id="sb-scroll"></div>
@@ -188,6 +204,13 @@ canvas{display:block;width:100%}
     </div>
   </div>
 
+  <!-- Budget -->
+  <div class="tool-main" id="tm-budget">
+    <div class="results" id="bud-main">
+      <div class="card"><p class="hint">Enter your monthly expenses in the sidebar to see a budget breakdown.</p></div>
+    </div>
+  </div>
+
 </div>
 </div>
 
@@ -217,6 +240,7 @@ function updP(k, v) {
   const fp = document.getElementById('fp-inner');
   if (fp) fp.innerHTML = fpInnerHTML();
   if (activeTool === 'calc') renderCalcMain();
+  if (activeTool === 'budget') renderBudgetMain();
 }
 
 /* ═══════════════════════════════════════════════
@@ -230,6 +254,7 @@ function switchTool(t) {
   document.getElementById('tm-'+t).classList.add('active');
   document.getElementById('sb-tab-'+t).classList.add('active');
   renderSidebar();
+  if (t === 'budget') renderBudgetMain();
 }
 
 /* ═══════════════════════════════════════════════
@@ -267,6 +292,18 @@ function ovrNum(lbl, key, opts={}) {
         style="padding-left:${pre?'20px':'9px'};padding-right:${suf?'24px':'9px'}"
         oninput="updOvr('${key}',this.value===''?null:+this.value)">
       ${suf ? `<span class="sb-suf">${suf}</span>` : ''}
+    </div></div>`;
+}
+
+function bgNum(lbl, key) {
+  const v = BG[key], val = (v===null||v===undefined) ? '' : v;
+  return `<div class="sb-field"><div class="sb-label">${lbl}</div>
+    <div class="sb-wrap">
+      <span class="sb-pre">$</span>
+      <input type="number" value="${val}" min="0"
+        style="padding-left:20px;padding-right:28px"
+        oninput="updBG('${key}',this.value===''?null:+this.value)">
+      <span class="sb-suf">/mo</span>
     </div></div>`;
 }
 
@@ -351,7 +388,7 @@ function renderSidebar() {
 
     <!-- Divider -->
     <div class="sb-divider">
-      <span class="sb-div-label">${activeTool==='calc'?'Cash Flow':'Monte Carlo'} Settings</span>
+      <span class="sb-div-label">${activeTool==='calc'?'Cash Flow':activeTool==='mc'?'Monte Carlo':'Budget'} Settings</span>
     </div>
 
     ${activeTool === 'calc' ? `
@@ -368,6 +405,29 @@ function renderSidebar() {
           <span style="color:#3A3937;font-size:10px">(aggressive)</span>
         </label>
       </div>
+    </div>
+    ` : activeTool === 'budget' ? `
+    <!-- Budget: expense inputs by group -->
+    <div class="sb-sec">
+      <div class="bud-group-head" style="color:#378ADD">Housing</div>
+      ${bgNum('Mortgage / Rent','mortgage')}
+      ${bgNum('Home Insurance','homeIns')}
+    </div>
+    <div class="sb-sec">
+      <div class="bud-group-head" style="color:#C0392B">Healthcare</div>
+      ${bgNum('Medical Insurance','medIns')}
+      ${bgNum('Other Healthcare','otherHealth')}
+    </div>
+    <div class="sb-sec">
+      <div class="bud-group-head" style="color:#1D9E75">Daily Living</div>
+      ${bgNum('Food / Groceries','food')}
+      ${bgNum('Utilities','utilities')}
+      ${bgNum('Personal Care','personalCare')}
+    </div>
+    <div class="sb-sec">
+      <div class="bud-group-head" style="color:#D4830A">Lifestyle</div>
+      ${bgNum('Transportation','transport')}
+      ${bgNum('Travel / Leisure','travel')}
     </div>
     ` : `
     <!-- MC: from-profile summary + tool settings -->
@@ -844,10 +904,199 @@ function runMC() {
 }
 
 /* ═══════════════════════════════════════════════
+   BUDGET
+   ═══════════════════════════════════════════════ */
+const BG_DEFAULTS = {
+  mortgage:null, homeIns:null,
+  medIns:null, otherHealth:null,
+  food:null, utilities:null, personalCare:null,
+  transport:null, travel:null
+};
+let BG = {...BG_DEFAULTS};
+
+const BC = [
+  {k:'mortgage',     l:'Mortgage / Rent',    g:'Housing',       c:'#378ADD'},
+  {k:'homeIns',      l:'Home Insurance',     g:'Housing',       c:'#5499D4'},
+  {k:'medIns',       l:'Medical Insurance',  g:'Healthcare',    c:'#C0392B'},
+  {k:'otherHealth',  l:'Other Healthcare',   g:'Healthcare',    c:'#E07060'},
+  {k:'food',         l:'Food / Groceries',   g:'Daily Living',  c:'#1D9E75'},
+  {k:'utilities',    l:'Utilities',          g:'Daily Living',  c:'#3DB88A'},
+  {k:'personalCare', l:'Personal Care',      g:'Daily Living',  c:'#6ACFAA'},
+  {k:'transport',    l:'Transportation',     g:'Lifestyle',     c:'#D4830A'},
+  {k:'travel',       l:'Travel / Leisure',   g:'Lifestyle',     c:'#EFA727'},
+];
+
+const BG_GROUP_C = {
+  'Housing':      '#378ADD',
+  'Healthcare':   '#C0392B',
+  'Daily Living': '#1D9E75',
+  'Lifestyle':    '#D4830A',
+};
+
+function budTotal() {
+  return BC.reduce((s, c) => s + (BG[c.k] || 0), 0);
+}
+
+function updBG(k, v) {
+  BG[k] = v;
+  saveState();
+  renderBudgetMain();
+}
+
+function syncBudgetToProfile() {
+  const total = budTotal();
+  if (!total) return;
+  P.exp = total;
+  saveState();
+  renderSidebar();
+  renderCalcMain();
+  renderBudgetMain();
+}
+
+function renderBudgetMain() {
+  const el = document.getElementById('bud-main');
+  if (!el) return;
+  const total = budTotal();
+  const annual = total * 12;
+  const profExp = P.exp || 0;
+  const diff = total - profExp;
+
+  // Build grouped structure for table
+  const groups = {};
+  BC.forEach(c => {
+    if (!groups[c.g]) groups[c.g] = {color: BG_GROUP_C[c.g], items: [], subtotal: 0};
+    const val = BG[c.k] || 0;
+    groups[c.g].items.push({...c, val});
+    groups[c.g].subtotal += val;
+  });
+
+  const tableRows = Object.entries(groups).map(([gname, g]) => {
+    const itemRows = g.items.map(it => `
+      <tr>
+        <td class="bud-indent" style="color:#555">${it.l}</td>
+        <td>${it.val ? fmtM(it.val) : '<span style="color:#CCC">—</span>'}</td>
+        <td>${it.val ? fmtM(it.val*12) : '<span style="color:#CCC">—</span>'}</td>
+        <td style="color:#888">${(total&&it.val) ? Math.round(it.val/total*100)+'%' : '<span style="color:#CCC">—</span>'}</td>
+      </tr>`).join('');
+    return `
+      <tr class="bud-group-row">
+        <td colspan="4" style="color:${g.color}">${gname}</td>
+      </tr>
+      ${itemRows}
+      <tr class="bud-subtotal">
+        <td style="padding-left:4px">Subtotal</td>
+        <td>${g.subtotal ? fmtM(g.subtotal) : '—'}</td>
+        <td>${g.subtotal ? fmtM(g.subtotal*12) : '—'}</td>
+        <td style="color:#888">${(total&&g.subtotal) ? Math.round(g.subtotal/total*100)+'%' : '—'}</td>
+      </tr>`;
+  }).join('');
+
+  const syncNote = total ? `
+    <div class="bud-sync-note">
+      ${profExp ? `<span style="color:#555">Profile expenses: <strong>${fmtM(profExp)}/mo</strong>
+        &nbsp;→&nbsp;<strong style="color:${diff>0?'#C0392B':diff<0?'#1D9E75':'#888'}">${diff>0?'+':''}${fmtM(diff)}/mo</strong></span>` : ''}
+      <button class="bud-sync-btn" onclick="syncBudgetToProfile()">
+        ${profExp ? 'Update' : 'Set'} as Monthly Expenses
+      </button>
+    </div>` : '';
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="metric-grid" style="grid-template-columns:1fr 1fr">
+        <div class="metric">
+          <div class="metric-lbl">Monthly Total</div>
+          <div class="metric-val">${total ? fmtM(total) : '—'}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-lbl">Annual Total</div>
+          <div class="metric-val">${total ? fmtM(annual) : '—'}</div>
+        </div>
+      </div>
+      ${syncNote}
+    </div>
+    <div class="card">
+      <div class="mc-chart-label">Monthly Budget Breakdown</div>
+      <div class="mc-chart-sub">Each bar scaled to the largest single category</div>
+      <canvas id="bud-cv"></canvas>
+    </div>
+    <div class="card">
+      <table class="bud-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th style="text-align:right">Monthly</th>
+            <th style="text-align:right">Annual</th>
+            <th style="text-align:right">Share</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+          <tr class="bud-grand">
+            <td>Total</td>
+            <td>${total ? fmtM(total) : '—'}</td>
+            <td>${total ? fmtM(annual) : '—'}</td>
+            <td>100%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+  drawBudgetChart();
+}
+
+function drawBudgetChart() {
+  const cv = document.getElementById('bud-cv');
+  if (!cv) return;
+  const dpr = devicePixelRatio || 1;
+  const W = cv.offsetWidth || 500;
+  const itemH = 20, gap = 6, labelW = 140, valW = 54, barArea = W - labelW - valW - 12;
+  const H = BC.length * (itemH + gap) + 4;
+  cv.width = W * dpr; cv.height = H * dpr;
+  cv.style.height = H + 'px';
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const maxVal = Math.max(...BC.map(c => BG[c.k] || 0), 1);
+
+  BC.forEach((cat, i) => {
+    const val = BG[cat.k] || 0;
+    const y = i * (itemH + gap);
+    const barW = Math.max(0, val / maxVal * barArea);
+
+    // Label
+    ctx.fillStyle = '#666';
+    ctx.font = `11px system-ui,sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(cat.l, labelW - 4, y + itemH / 2);
+
+    // Bar track
+    ctx.fillStyle = '#F0EFE8';
+    ctx.beginPath();
+    ctx.roundRect(labelW, y, barArea, itemH, 3);
+    ctx.fill();
+
+    // Bar fill
+    if (barW > 0) {
+      ctx.fillStyle = cat.c;
+      ctx.beginPath();
+      ctx.roundRect(labelW, y, barW, itemH, 3);
+      ctx.fill();
+    }
+
+    // Value label
+    ctx.fillStyle = val ? '#333' : '#BBB';
+    ctx.textAlign = 'left';
+    ctx.font = `11px ui-monospace,monospace`;
+    ctx.fillText(val ? fmtM(val) : '—', labelW + barArea + 6, y + itemH / 2);
+  });
+}
+
+/* ═══════════════════════════════════════════════
    PERSISTENCE
    ═══════════════════════════════════════════════ */
 function saveState() {
-  try { localStorage.setItem('retirement-suite-v2',JSON.stringify({P,scenarios,activeScenario,MC})); } catch(e){}
+  try { localStorage.setItem('retirement-suite-v2',JSON.stringify({P,scenarios,activeScenario,MC,BG})); } catch(e){}
 }
 
 function loadState() {
@@ -860,6 +1109,7 @@ function loadState() {
       if(d.scenarios&&Array.isArray(d.scenarios)&&d.scenarios.length) scenarios=d.scenarios;
       if(typeof d.activeScenario==='number') activeScenario=Math.max(0,Math.min(d.activeScenario,scenarios.length-1));
       if(d.MC) MC=Object.assign({},MC,d.MC);
+      if(d.BG) BG=Object.assign({},BG_DEFAULTS,d.BG);
       return;
     }
     // Migrate from v1
@@ -899,7 +1149,7 @@ function loadState() {
    EXPORT / IMPORT
    ═══════════════════════════════════════════════ */
 function exportAll() {
-  const blob=new Blob([JSON.stringify({P,scenarios,MC},null,2)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({P,scenarios,MC,BG},null,2)],{type:'application/json'});
   const u=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=u;a.download='retirement-plan.json';a.click();URL.revokeObjectURL(u);
 }
@@ -912,6 +1162,7 @@ function importAll(input) {
       if(d.P) P=Object.assign({},PROFILE_DEFAULTS,d.P);
       if(d.scenarios&&Array.isArray(d.scenarios)&&d.scenarios.length){scenarios=d.scenarios;activeScenario=0;}
       if(d.MC) MC=Object.assign({},MC,d.MC);
+      if(d.BG) BG=Object.assign({},BG_DEFAULTS,d.BG);
       saveState();init();
     }catch{alert('Invalid JSON file');}
   };
@@ -931,6 +1182,7 @@ function init() {
   renderSidebar();
   renderCalcScenarioBar();
   renderCalcMain();
+  renderBudgetMain();
 }
 
 window.addEventListener('resize',()=>{
@@ -941,6 +1193,7 @@ window.addEventListener('resize',()=>{
       calcTab==='cashflow'?drawCalcBar(cv,data):drawCalcGap(cv,data);
     }
   }
+  if(activeTool==='budget') drawBudgetChart();
 });
 
 loadState();
