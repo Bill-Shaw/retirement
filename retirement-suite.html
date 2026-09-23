@@ -129,6 +129,13 @@ tr:hover td{background:#f8f8f5}
 .mc-chart-label{font-size:13px;font-weight:600;margin-bottom:3px}
 .mc-chart-sub{font-size:12px;color:#888;margin-bottom:8px}
 
+.ph-card{background:#232220;border:1px solid #38352F;border-radius:6px;padding:9px;margin-bottom:7px}
+.ph-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.ph-del{background:none;border:none;color:#5A5855;cursor:pointer;font-size:18px;line-height:1;padding:0}
+.ph-del:hover{color:#E24B4A}
+.ph-add{font-size:11px;color:#6A9ED4;background:none;border:1px dashed #2E3A4A;border-radius:4px;padding:5px 0;cursor:pointer;width:100%;margin-top:2px}
+.ph-add:hover{background:#1A2530}
+td.wdr-ov{color:#BA7517;font-weight:600}
 .hint{font-size:12px;color:#aaa;padding:40px 16px;text-align:center;line-height:1.7}
 .footer-note{font-size:11px;color:#aaa;text-align:center;padding:4px 0}
 canvas{display:block;width:100%}
@@ -308,6 +315,18 @@ function bgNum(lbl, key) {
     </div></div>`;
 }
 
+function phInput(lbl, key, pi, val, opts={}) {
+  const {suf='', min=0, max=9999, step=1, ph=''} = opts;
+  const v = (val===null||val===undefined) ? '' : val;
+  return `<div class="sb-field"><div class="sb-label">${lbl}</div>
+    <div class="sb-wrap">
+      <input type="number" value="${v}" min="${min}" max="${max}" step="${step}" placeholder="${ph}"
+        style="padding-right:${suf?'24px':'9px'}"
+        oninput="updPhase(${pi},'${key}',this.value===''?null:+this.value)">
+      ${suf ? `<span class="sb-suf">${suf}</span>` : ''}
+    </div></div>`;
+}
+
 function mcNum(lbl, key, opts={}) {
   const {min=0, max=999999, pre='', suf='', ph='', step=1} = opts;
   const val = MC[key] !== undefined ? MC[key] : '';
@@ -407,6 +426,23 @@ function renderSidebar() {
         </label>
       </div>
     </div>
+    <div class="sb-sec">
+      <div class="sb-sec-head">Withdrawal phases</div>
+      <div style="font-size:11px;color:#6A6865;margin-bottom:8px;line-height:1.5">Override the shared rate (${P.wdr||5}%) for specific date ranges.</div>
+      ${(s.phases||[]).map((ph,i)=>`
+      <div class="ph-card">
+        <div class="ph-card-head">
+          <span style="font-size:10px;font-weight:600;color:#7A7875;text-transform:uppercase;letter-spacing:.06em">Phase ${i+1}</span>
+          <button class="ph-del" onclick="removePhase(${i})">×</button>
+        </div>
+        <div class="sb-2col">
+          ${phInput('From year','from',i,ph.from,{min:2020,max:2100,ph:'e.g. '+THIS_YEAR})}
+          ${phInput('Until year','until',i,ph.until,{min:2020,max:2100,ph:'open end'})}
+        </div>
+        ${phInput('Withdrawal rate','rate',i,ph.rate,{suf:'%',min:0,max:25,step:0.1,ph:(P.wdr||5)+' (default)'})}
+      </div>`).join('')}
+      <button class="ph-add" onclick="addPhase()">+ add phase</button>
+    </div>
     ` : activeTool === 'budget' ? `
     <!-- Budget: expense inputs by group -->
     <div class="sb-sec">
@@ -488,7 +524,7 @@ function renderSidebar() {
 const CC = {hWork:'#378ADD',wWork:'#85B7EB',h401:'#1D9E75',w401:'#5DCAA5',hSS:'#EF9F27',wSS:'#FAC775',exp:'#E24B4A'};
 
 function defScenario(n='Scenario 1') {
-  return { name:n, inflWork:true, infl401k:false };
+  return { name:n, inflWork:true, infl401k:false, phases:[] };
 }
 
 let scenarios = [defScenario()], activeScenario = 0, calcTab = 'cashflow';
@@ -506,6 +542,15 @@ function eff(s) {
   };
 }
 
+function effectiveWdr(calYear, s) {
+  for (const ph of (s.phases||[])) {
+    if (ph.from != null && calYear >= ph.from && (ph.until == null || calYear <= ph.until)) {
+      return ph.rate != null ? ph.rate : (P.wdr || 5);
+    }
+  }
+  return P.wdr || 5;
+}
+
 function calcSeries() {
   const h = P.hName||'Person 1', w = P.wName||'Person 2';
   return [
@@ -517,10 +562,13 @@ function calcSeries() {
 
 function project(s) {
   const e = eff(s);
-  const rows=[], ir=e.inf/100, wr=e.wdr/100;
+  const rows=[], ir=e.inf/100;
+  const defWdr = P.wdr || 5;
   for (let y=0; y<=e.yrs; y++) {
     const calYear=THIS_YEAR+y, ha=(P.hCur||0)+y, wa=(P.wCur||0)+y;
     const im=Math.pow(1+ir,y), ex=e.exp*im;
+    const yearWdr = effectiveWdr(calYear, s);
+    const wr = yearWdr / 100;
     const hw=(P.hCur&&P.hRet&&P.hInc&&ha<P.hRet) ? P.hInc*(e.inflWork?im:1) : 0;
     const ww=(P.wCur&&P.wRet&&P.wInc&&wa<P.wRet) ? P.wInc*(e.inflWork?im:1) : 0;
     const hb=ha<59.5?(P.h401e||0):(P.h401f||P.h401e||0);
@@ -530,9 +578,11 @@ function project(s) {
     const hs=(P.hCur&&P.hSSA&&P.hSSB&&ha>=P.hSSA) ? P.hSSB*im : 0;
     const ws=(P.wCur&&P.wSSA&&P.wSSB&&wa>=P.wSSA) ? P.wSSB*im : 0;
     const inc=hw+ww+h4+w4+hs+ws;
+    const wdrOverride = yearWdr !== defWdr;
     rows.push({y,calYear,ha,wa,
       hWork:Math.round(hw),wWork:Math.round(ww),h401:Math.round(h4),w401:Math.round(w4),
-      hSS:Math.round(hs),wSS:Math.round(ws),inc:Math.round(inc),ex:Math.round(ex),gap:Math.round(inc-ex)});
+      hSS:Math.round(hs),wSS:Math.round(ws),inc:Math.round(inc),ex:Math.round(ex),gap:Math.round(inc-ex),
+      wdr:yearWdr, wdrOverride});
   }
   return rows;
 }
@@ -646,7 +696,7 @@ function renderCalcMain() {
           <th>${P.hName||'P1'} work</th><th>${P.wName||'P2'} work</th>
           <th>${P.hName||'P1'} 401k</th><th>${P.wName||'P2'} 401k</th>
           <th>${P.hName||'P1'} SS</th><th>${P.wName||'P2'} SS</th>
-          <th>Income</th><th>Expenses</th><th>Gap</th>
+          <th>Income</th><th>Expenses</th><th>Gap</th><th>Rate</th>
         </tr></thead>
         <tbody>${data.map(d=>`<tr class="${d.gap<0?'deficit':''}">
           <td style="text-align:left;font-weight:500">${d.calYear}</td>
@@ -655,6 +705,7 @@ function renderCalcMain() {
           ${[d.hWork,d.wWork,d.h401,d.w401,d.hSS,d.wSS].map(vv=>`<td class="${vv===0?'mu':''}">${vv===0?'—':fK(vv)}</td>`).join('')}
           <td><strong>${fK(d.inc)}</strong></td><td>${fK(d.ex)}</td>
           <td class="${d.gap>=0?'gp':'gn'}">${fD(d.gap)}</td>
+          <td class="${d.wdrOverride?'wdr-ov':'mu'}">${d.wdr.toFixed(1)}%</td>
         </tr>`).join('')}</tbody>
       </table></div>
     </div>
@@ -693,6 +744,26 @@ function removeScenario() {
   if(scenarios.length===1) return;
   scenarios.splice(activeScenario,1); activeScenario=Math.max(0,activeScenario-1);
   renderCalcScenarioBar(); renderSidebar(); renderCalcMain(); saveState();
+}
+
+function addPhase() {
+  const s = calcScenario();
+  if (!s.phases) s.phases = [];
+  s.phases.push({from:null, until:null, rate:null});
+  renderSidebar(); renderCalcMain(); saveState();
+}
+
+function removePhase(i) {
+  const s = calcScenario();
+  (s.phases||[]).splice(i, 1);
+  renderSidebar(); renderCalcMain(); saveState();
+}
+
+function updPhase(i, k, v) {
+  const s = calcScenario();
+  if (!s.phases) s.phases = [];
+  s.phases[i][k] = v;
+  renderCalcMain(); saveState();
 }
 
 /* ═══════════════════════════════════════════════
@@ -1108,6 +1179,7 @@ function loadState() {
       const d=JSON.parse(raw);
       if(d.P) P=Object.assign({},PROFILE_DEFAULTS,d.P);
       if(d.scenarios&&Array.isArray(d.scenarios)&&d.scenarios.length) scenarios=d.scenarios;
+      scenarios=scenarios.map(s=>({phases:[],...s}));
       if(typeof d.activeScenario==='number') activeScenario=Math.max(0,Math.min(d.activeScenario,scenarios.length-1));
       if(d.MC) MC=Object.assign({},MC,d.MC);
       if(d.BG) BG=Object.assign({},BG_DEFAULTS,d.BG);
