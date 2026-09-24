@@ -155,12 +155,26 @@ canvas{display:block;width:100%}
 .bud-sync-btn{font-size:11px;padding:4px 10px;border-radius:5px;border:1px solid #CCC;background:#F5F5F0;cursor:pointer;white-space:nowrap;color:#444}
 .bud-sync-btn:hover{background:#E8E7E0}
 
+.mob-nav{display:none}
+.mob-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:transparent;transition:color .2s}
+
 @media(max-width:800px){
-  .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
-  .sidebar{height:auto;max-height:45vh}
-  .main-wrap{height:55vh}
+  .app{display:block;position:relative;height:100vh;height:100dvh;overflow:hidden}
+  .sidebar{position:absolute;top:0;right:0;bottom:56px;left:0;height:auto;max-height:none;z-index:10;transition:opacity .18s,transform .18s}
+  .sidebar.mob-hide{opacity:0;pointer-events:none;transform:translateX(-14px)}
+  .main-wrap{position:absolute;top:0;right:0;bottom:56px;left:0;height:auto;z-index:10;transition:opacity .18s,transform .18s}
+  .main-wrap.mob-hide{opacity:0;pointer-events:none;transform:translateX(14px)}
+  .mob-nav{display:flex;position:absolute;bottom:0;left:0;right:0;height:56px;z-index:100;border-top:1px solid;transition:background .2s,border-color .2s}
+  .mob-nav.nav-inputs{background:#18181A;border-color:#333336}
+  .mob-nav.nav-results{background:#F8F7F2;border-color:#E0DFD8}
+  .mob-nav.nav-inputs #mob-nb-inp{color:#7DBF95}
+  .mob-nav.nav-inputs #mob-nb-res{color:#5A5855}
+  .mob-nav.nav-results #mob-nb-inp{color:#AAAAAA}
+  .mob-nav.nav-results #mob-nb-res{color:#1a7a4a}
+  .sidebar input[type=number],.sidebar input[type=text],.sidebar select{padding:9px 9px}
   .metric-grid{grid-template-columns:1fr 1fr}
   .mc-stats{grid-template-columns:1fr}
+  .col-mob-hide{display:none}
 }
 </style>
 </head>
@@ -187,7 +201,7 @@ canvas{display:block;width:100%}
 </aside>
 
 <!-- ═══════════════════════ MAIN AREA ═══════════════════════ -->
-<div class="main-wrap">
+<div class="main-wrap mob-hide">
 
   <!-- Cash Flow Calculator -->
   <div class="tool-main active" id="tm-calc">
@@ -219,6 +233,16 @@ canvas{display:block;width:100%}
     </div>
   </div>
 
+</div>
+<div class="mob-nav nav-inputs" id="mob-nav">
+  <button class="mob-nav-btn" id="mob-nb-inp" onclick="mobSwitch('inputs')">
+    <svg width="18" height="14" viewBox="0 0 18 14" fill="currentColor"><rect x="0" y="0" width="18" height="2" rx="1"/><rect x="0" y="6" width="13" height="2" rx="1"/><rect x="0" y="12" width="9" height="2" rx="1"/></svg>
+    Inputs
+  </button>
+  <button class="mob-nav-btn" id="mob-nb-res" onclick="mobSwitch('results')">
+    <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor"><rect x="0" y="8" width="3" height="6"/><rect x="4.5" y="5" width="3" height="9"/><rect x="9" y="2" width="3" height="12"/><rect x="13.5" y="6" width="3" height="8"/></svg>
+    Results
+  </button>
 </div>
 </div>
 
@@ -697,20 +721,20 @@ function renderCalcMain() {
       <div style="overflow-x:auto"><table>
         <thead><tr>
           <th style="text-align:left">Year</th>
-          <th>${P.hName||'P1'} age</th><th>${P.wName||'P2'} age</th>
-          <th>${P.hName||'P1'} work</th><th>${P.wName||'P2'} work</th>
-          <th>${P.hName||'P1'} 401k</th><th>${P.wName||'P2'} 401k</th>
-          <th>${P.hName||'P1'} SS</th><th>${P.wName||'P2'} SS</th>
-          <th>Income</th><th>Expenses</th><th>Gap</th><th>Rate</th>
+          <th class="col-mob-hide">${P.hName||'P1'} age</th><th class="col-mob-hide">${P.wName||'P2'} age</th>
+          <th class="col-mob-hide">${P.hName||'P1'} work</th><th class="col-mob-hide">${P.wName||'P2'} work</th>
+          <th class="col-mob-hide">${P.hName||'P1'} 401k</th><th class="col-mob-hide">${P.wName||'P2'} 401k</th>
+          <th class="col-mob-hide">${P.hName||'P1'} SS</th><th class="col-mob-hide">${P.wName||'P2'} SS</th>
+          <th>Income</th><th>Expenses</th><th>Gap</th><th class="col-mob-hide">Rate</th>
         </tr></thead>
         <tbody>${data.map(d=>`<tr class="${d.gap<0?'deficit':''}">
           <td style="text-align:left;font-weight:500">${d.calYear}</td>
-          <td class="${!P.hCur?'mu':''}">${P.hCur?d.ha:'—'}</td>
-          <td class="${!P.wCur?'mu':''}">${P.wCur?d.wa:'—'}</td>
-          ${[d.hWork,d.wWork,d.h401,d.w401,d.hSS,d.wSS].map(vv=>`<td class="${vv===0?'mu':''}">${vv===0?'—':fK(vv)}</td>`).join('')}
+          <td class="col-mob-hide ${!P.hCur?'mu':''}">${P.hCur?d.ha:'—'}</td>
+          <td class="col-mob-hide ${!P.wCur?'mu':''}">${P.wCur?d.wa:'—'}</td>
+          ${[d.hWork,d.wWork,d.h401,d.w401,d.hSS,d.wSS].map(vv=>`<td class="col-mob-hide ${vv===0?'mu':''}">${vv===0?'—':fK(vv)}</td>`).join('')}
           <td><strong>${fK(d.inc)}</strong></td><td>${fK(d.ex)}</td>
           <td class="${d.gap>=0?'gp':'gn'}">${fD(d.gap)}</td>
-          <td class="${d.wdrOverride?'wdr-ov':'mu'}">${d.wdr.toFixed(1)}%</td>
+          <td class="col-mob-hide ${d.wdrOverride?'wdr-ov':'mu'}">${d.wdr.toFixed(1)}%</td>
         </tr>`).join('')}</tbody>
       </table></div>
     </div>
@@ -973,6 +997,7 @@ function runMC() {
         Withdrawals are pre-tax — raise spending to account for your effective rate. Not financial advice.
       </p>
     </div>`;
+  mobShowResults();
   requestAnimationFrame(()=>{
     const fan=document.getElementById('mc-fan'),hist=document.getElementById('mc-hist');
     if(fan)  drawMCFan(fan,r);
@@ -1284,6 +1309,25 @@ window.addEventListener('resize',()=>{
   }
   if(activeTool==='budget') drawBudgetChart();
 });
+
+function mobSwitch(which) {
+  const sb = document.querySelector('.sidebar');
+  const mw = document.querySelector('.main-wrap');
+  const nav = document.getElementById('mob-nav');
+  if (!nav) return;
+  if (which === 'inputs') {
+    sb.classList.remove('mob-hide');
+    mw.classList.add('mob-hide');
+    nav.className = 'mob-nav nav-inputs';
+  } else {
+    sb.classList.add('mob-hide');
+    mw.classList.remove('mob-hide');
+    nav.className = 'mob-nav nav-results';
+  }
+}
+function mobShowResults() {
+  if (window.innerWidth <= 800) mobSwitch('results');
+}
 
 loadState();
 init();
