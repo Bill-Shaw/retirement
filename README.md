@@ -15,11 +15,12 @@ Open `retirement-suite.html` directly in any modern browser to get started.
 The app uses a **persistent dark sidebar** on the left and a **results-only main area** on the right.
 
 **Sidebar** (always visible):
-- Tool switcher tabs at the top — **Cash Flow** and **Monte Carlo**
+- Tool switcher tabs at the top — **Cash Flow**, **Monte Carlo**, and **Budget**
 - **Person 1** and **Person 2** sections with all person-specific inputs
 - **Shared Assumptions** (expenses, withdrawal rate, inflation, projection years, portfolio balance)
 - A divider below the shared fields showing tool-specific settings that change when you switch tabs
 - Export / Import buttons at the bottom
+- **Clear All Data** button to wipe all saved state and start fresh
 
 **Main area**: projections and charts only — no inputs.
 
@@ -79,6 +80,18 @@ Run multiple what-if comparisons side by side. Use **+ Copy** to duplicate the c
 - Inflate work income with CPI (toggle)
 - Inflate 401k withdrawals with CPI — aggressive option (toggle)
 
+**Withdrawal phase overrides**
+
+Define up to N date-range phases that override the shared withdrawal rate for specific calendar-year windows — useful for modeling a higher drawdown during a gap before Social Security starts, or a reduced rate once other income kicks in.
+
+| Field | Description |
+|-------|-------------|
+| From year | First calendar year the phase applies |
+| Last year | Last calendar year the phase applies (inclusive); leave blank for open-ended |
+| Withdrawal rate | Rate to use for this window; leave blank to inherit the shared default |
+
+Each phase card shows a **"covers YYYY – YYYY (inclusive)"** line so it's always clear which rows will be affected. Phases are matched in order — the first phase whose date range contains the year wins.
+
 ---
 
 ### Tool 2 — Monte Carlo Simulator
@@ -106,7 +119,8 @@ The simulator automatically derives its parameters from your shared profile:
 
 | Field | Notes |
 |-------|-------|
-| Annual contributions | Added each year during the accumulation phase |
+| Person 1 401k / match / HSA | Monthly contributions during accumulation |
+| Person 2 401k / match / HSA | Monthly contributions during accumulation |
 | Allocation preset | Sets mean return + volatility; or choose Custom |
 | Mean return / Volatility | Arithmetic annual figures |
 | Inflation | Applied to spending and income during retirement |
@@ -120,6 +134,34 @@ The simulator automatically derives its parameters from your shared profile:
 - **Histogram** — distribution of all final portfolio values; red bar = ran out of money
 
 Click **Run Simulation** to run. Each run draws fresh random paths.
+
+---
+
+---
+
+### Tool 3 — Budget
+
+A monthly household expense breakdown to help you calibrate the **Monthly expenses** figure used across all tools.
+
+**Categories**
+
+| Category | Notes |
+|----------|-------|
+| Mortgage / rent | Housing payment |
+| Home insurance | Annual or monthly |
+| Medical insurance | Premiums |
+| Other healthcare | Out-of-pocket, dental, vision |
+| Food | Groceries and dining |
+| Utilities | Electric, gas, water, internet |
+| Personal care | Haircuts, clothing, subscriptions |
+| Transportation | Car payments, fuel, insurance |
+| Travel / leisure | Vacations, entertainment |
+
+**Outputs**
+- **Category breakdown chart** — horizontal bar chart showing spend by category
+- **Total** — sum across all categories; copy it directly to the shared Monthly expenses field
+
+Budget values are saved with the rest of your session data and included in Export / Import.
 
 ---
 

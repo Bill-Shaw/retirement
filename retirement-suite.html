@@ -322,7 +322,7 @@ function phInput(lbl, key, pi, val, opts={}) {
     <div class="sb-wrap">
       <input type="number" value="${v}" min="${min}" max="${max}" step="${step}" placeholder="${ph}"
         style="padding-right:${suf?'24px':'9px'}"
-        oninput="updPhase(${pi},'${key}',this.value===''?null:+this.value)">
+        onchange="updPhase(${pi},'${key}',this.value===''?null:+this.value)">
       ${suf ? `<span class="sb-suf">${suf}</span>` : ''}
     </div></div>`;
 }
@@ -429,18 +429,23 @@ function renderSidebar() {
     <div class="sb-sec">
       <div class="sb-sec-head">Withdrawal phases</div>
       <div style="font-size:11px;color:#6A6865;margin-bottom:8px;line-height:1.5">Override the shared rate (${P.wdr||5}%) for specific date ranges.</div>
-      ${(s.phases||[]).map((ph,i)=>`
+      ${(s.phases||[]).map((ph,i)=>{
+        const fromLbl = ph.from != null ? ph.from : '?';
+        const untilLbl = ph.until != null ? ph.until : 'end';
+        const showCovers = ph.from != null || ph.until != null;
+        return `
       <div class="ph-card">
         <div class="ph-card-head">
           <span style="font-size:10px;font-weight:600;color:#7A7875;text-transform:uppercase;letter-spacing:.06em">Phase ${i+1}</span>
           <button class="ph-del" onclick="removePhase(${i})">×</button>
         </div>
+        ${showCovers ? `<div style="font-size:10px;color:#5A8FA0;margin-bottom:6px">covers ${fromLbl} – ${untilLbl} (inclusive)</div>` : ''}
         <div class="sb-2col">
           ${phInput('From year','from',i,ph.from,{min:2020,max:2100,ph:'e.g. '+THIS_YEAR})}
-          ${phInput('Until year','until',i,ph.until,{min:2020,max:2100,ph:'open end'})}
+          ${phInput('Last year','until',i,ph.until,{min:2020,max:2100,ph:'open end'})}
         </div>
         ${phInput('Withdrawal rate','rate',i,ph.rate,{suf:'%',min:0,max:25,step:0.1,ph:(P.wdr||5)+' (default)'})}
-      </div>`).join('')}
+      </div>`;}).join('')}
       <button class="ph-add" onclick="addPhase()">+ add phase</button>
     </div>
     ` : activeTool === 'budget' ? `
