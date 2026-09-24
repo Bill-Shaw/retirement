@@ -297,7 +297,7 @@ function switchTool(t) {
   document.getElementById('sb-tab-'+t).classList.add('active');
   renderSidebar();
   if (t === 'budget') renderBudgetMain();
-  if (t === 'guide') { renderGuide(); mobShowResults(); }
+  if (t === 'guide') renderGuide();
 }
 
 /* ═══════════════════════════════════════════════
@@ -1333,7 +1333,8 @@ window.addEventListener('resize',()=>{
 
 function guideScrollTo(id) {
   const el = document.getElementById('guide-'+id);
-  if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  if (el) el.scrollIntoView({behavior:'instant', block:'start'});
+  mobShowResults();
 }
 
 function renderGuide() {
