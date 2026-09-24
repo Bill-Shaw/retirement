@@ -154,6 +154,10 @@ canvas{display:block;width:100%}
 .bud-sync-note{font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #E0DFD8}
 .bud-sync-btn{font-size:11px;padding:4px 10px;border-radius:5px;border:1px solid #CCC;background:#F5F5F0;cursor:pointer;white-space:nowrap;color:#444}
 .bud-sync-btn:hover{background:#E8E7E0}
+.sb-guide-tab{display:block;width:100%;margin-top:4px;padding:5px 8px;background:transparent;border:1px solid #2A2A2E;border-radius:5px;color:#5A8FA0;font-size:11px;font-weight:500;cursor:pointer;text-align:center;transition:background .15s,color .15s,border-color .15s}
+.sb-guide-tab:hover,.sb-guide-tab.active{background:#1a2535;color:#8AAFCC;border-color:#2A3A4A}
+.guide-toc-item{font-size:12px;color:#7A7875;padding:5px 8px;border-radius:4px;cursor:pointer;transition:background .15s,color .15s}
+.guide-toc-item:hover{background:#222224;color:#C8C4BC}
 
 .mob-nav{display:none}
 .mob-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:transparent;transition:color .2s}
@@ -190,6 +194,7 @@ canvas{display:block;width:100%}
       <button class="sb-tab" id="sb-tab-mc" onclick="switchTool('mc')">Monte Carlo</button>
       <button class="sb-tab" id="sb-tab-budget" onclick="switchTool('budget')">Budget</button>
     </div>
+    <button class="sb-tab sb-guide-tab" id="sb-tab-guide" onclick="switchTool('guide')">Reference Guide</button>
   </div>
   <div class="sb-scroll" id="sb-scroll"></div>
   <div class="sb-footer">
@@ -231,6 +236,11 @@ canvas{display:block;width:100%}
     <div class="results" id="bud-main">
       <div class="card"><p class="hint">Enter your monthly expenses in the sidebar to see a budget breakdown.</p></div>
     </div>
+  </div>
+
+  <!-- Reference Guide -->
+  <div class="tool-main" id="tm-guide">
+    <div class="results" id="guide-main"></div>
   </div>
 
 </div>
@@ -287,6 +297,7 @@ function switchTool(t) {
   document.getElementById('sb-tab-'+t).classList.add('active');
   renderSidebar();
   if (t === 'budget') renderBudgetMain();
+  if (t === 'guide') renderGuide();
 }
 
 /* ═══════════════════════════════════════════════
@@ -382,6 +393,16 @@ function fpInnerHTML() {
 }
 
 function renderSidebar() {
+  if (activeTool === 'guide') {
+    document.getElementById('sb-scroll').innerHTML = `
+      <div class="sb-sec">
+        <div class="sb-sec-head">Contents</div>
+        <div style="display:flex;flex-direction:column;gap:1px;margin-top:4px">
+          ${[['start','Getting started'],['cashflow','Cash Flow calculator'],['mc','Monte Carlo simulator'],['budget','Budget tool'],['scenarios','Scenarios'],['phases','Withdrawal phases'],['rule55','Rule of 55'],['tips','Tips & notes']].map(([id,lbl])=>`<div class="guide-toc-item" onclick="guideScrollTo('${id}')">${lbl}</div>`).join('')}
+        </div>
+      </div>`;
+    return;
+  }
   const s = calcScenario();
   document.getElementById('sb-scroll').innerHTML = `
     <!-- Person 1 -->
@@ -1309,6 +1330,103 @@ window.addEventListener('resize',()=>{
   }
   if(activeTool==='budget') drawBudgetChart();
 });
+
+function guideScrollTo(id) {
+  const el = document.getElementById('guide-'+id);
+  if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function renderGuide() {
+  const el = document.getElementById('guide-main');
+  if (!el) return;
+  const step = (n,h,b) => `<div style="display:flex;gap:12px;margin-bottom:${n<4?'12px':'0'}"><div style="width:24px;height:24px;background:#E6F4EC;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#1a7a4a;flex-shrink:0;margin-top:1px">${n}</div><div style="font-size:13px;color:#444;line-height:1.55"><strong style="color:#2A2825">${h}.</strong> ${b}</div></div>`;
+  const row = (k,v,mw='90px') => `<div style="display:flex;gap:10px;margin-bottom:7px"><div style="font-size:11px;font-weight:600;color:#2A2825;white-space:nowrap;padding-top:1px;min-width:${mw};flex-shrink:0">${k}</div><div style="font-size:12px;color:#555;line-height:1.5">${v}</div></div>`;
+  const bullet = t => `<div style="font-size:12px;color:#555;line-height:1.5;margin-bottom:5px;padding-left:10px;border-left:2px solid #E0DFD8">${t}</div>`;
+  const tip = (t,c='#1a4a2a',bg='#E6F4EC',bc='#7DBF95') => `<div style="background:${bg};border-left:3px solid ${bc};border-radius:0 5px 5px 0;padding:9px 12px;font-size:12px;color:${c};line-height:1.55;margin-top:10px">${t}</div>`;
+  const card = (id,title,body) => `<div class="card" id="guide-${id}" style="margin-bottom:14px;scroll-margin-top:16px"><div style="font-size:14px;font-weight:500;color:#2A2825;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #E0DFD8">${title}</div>${body}</div>`;
+  const col2 = (a,b) => `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px"><div>${a}</div><div>${b}</div></div>`;
+  const subhd = t => `<div style="font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px">${t}</div>`;
+
+  el.innerHTML = `
+    <div style="background:#1E2A3A;border-radius:10px;padding:22px 24px;margin-bottom:16px;color:#C8D8E8">
+      <div style="font-size:17px;font-weight:500;color:#E4EEF8;margin-bottom:6px">Retirement Planning Suite</div>
+      <div style="font-size:13px;color:#8AAFCC;line-height:1.6">A self-contained toolkit for modeling retirement income, portfolio survival, and monthly expenses. Everything stays in your browser — no account, no server, no data sent anywhere.</div>
+    </div>
+
+    ${card('start','Getting started',
+      step(1,'Enter ages','Fill in current age and retirement age for each person in the sidebar. This unlocks the Cash Flow projections.')+
+      step(2,'Add Social Security','Enter claim age (62–70) and estimated monthly benefit for each person. Find your personal estimate at SSA.gov.')+
+      step(3,'Set shared assumptions','Enter monthly expenses, withdrawal rate, and inflation. These feed all three tools — change them once and everything updates.')+
+      step(4,'Explore the tools','Switch between <strong>Cash Flow</strong>, <strong>Monte Carlo</strong>, and <strong>Budget</strong> using the tabs at the top of the sidebar.')
+    )}
+
+    ${card('cashflow','Cash Flow calculator',
+      `<div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:12px">Projects year-by-year household income vs. expenses across your full horizon. Deficit years appear in red; surplus years in green.</div>`+
+      col2(
+        subhd('What it models')+
+        bullet('Work income for each person (stops at their retirement age)')+
+        bullet('401k / IRA withdrawals, switching from Rule-of-55 balance to full accounts at 59½')+
+        bullet('Social Security for each person (starts at their claimed age)')+
+        bullet('Monthly expenses growing with inflation'),
+        subhd('Outputs')+
+        bullet('Metrics bar — current gap, break-even year, total shortfall')+
+        bullet('Cash flow chart — stacked income sources vs. expense line')+
+        bullet('Surplus / shortfall chart by year')+
+        bullet('Year-by-year detail table with every income source')
+      )+
+      tip('Use <strong>Scenarios</strong> (the "+ Copy" button above the results) to run multiple what-if comparisons side by side. Each scenario can override its own withdrawal rate, inflation, expenses, and projection years.')
+    )}
+
+    ${card('mc','Monte Carlo simulator',
+      `<div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:12px">Stress-tests your portfolio across thousands of randomized market paths to estimate the probability your money lasts the full horizon. Click <strong>Run Simulation</strong> in the sidebar to start — each run draws fresh random returns.</div>`+
+      col2(
+        subhd('Success rate verdicts')+
+        [['STRONG','≥ 90% of paths survive','#1a7a4a','#E6F4EC'],['WORKABLE','≥ 75%','#3D6B1A','#EAF3DE'],['FRAGILE','≥ 55%','#A0692A','#FDF0DC'],['AT RISK','< 55%','#A32D2D','#FCEBEB']].map(([v,d,tc,bg])=>`<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:6px"><span style="font-size:10px;font-weight:700;color:${tc};background:${bg};padding:2px 6px;border-radius:3px;white-space:nowrap">${v}</span><span style="font-size:12px;color:#555">${d}</span></div>`).join(''),
+        subhd('How to read the charts')+
+        bullet('Fan chart — bands show 10th–90th and 25th–75th percentile paths; blue line is the median')+
+        bullet('Histogram — distribution of where every simulated path ends; red bar = ran out of money')+
+        bullet('Stats — median ending balance, 10th-percentile balance, worst-10% survival years')
+      )+
+      tip('Withdrawals are pre-tax — raise your spending figure to approximate your effective tax rate. Returns use a log-normal distribution; real markets exhibit fat tails this model does not capture.','#1a3050','#EEF3FB','#5A8FA0')
+    )}
+
+    ${card('budget','Budget tool',
+      `<div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:10px">Breaks down monthly household expenses by category to help you calibrate the <strong>Monthly expenses</strong> figure used across all tools.</div>`+
+      `<div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:12px">Enter amounts in each category — the total auto-updates. Click <strong>Sync → Shared Expenses</strong> to copy the total directly into Shared Assumptions.</div>`+
+      `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${[['Housing','Mortgage/rent, home insurance'],['Healthcare','Medical insurance, out-of-pocket'],['Daily Living','Food, utilities, personal care'],['Lifestyle','Transportation, travel, leisure'],['Budget saves','Data is included in Export / Import and persists across sessions']].map(([k,v],i)=>`<div style="${i===4?'grid-column:span 2;':''}background:#F8F7F2;border-radius:6px;padding:9px 11px"><div style="font-size:11px;font-weight:600;color:#2A2825;margin-bottom:3px">${k}</div><div style="font-size:11px;color:#888;line-height:1.4">${v}</div></div>`).join('')}</div>`
+    )}
+
+    ${card('scenarios','Scenarios',
+      `<div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:10px">Run multiple what-if comparisons side by side in the Cash Flow tool. The scenario bar sits above the results area.</div>`+
+      row('+ Copy','Duplicates the current scenario with all its current settings')+
+      row('Scenario tabs','Click any tab in the bar to switch between scenarios')+
+      row('Name field','Rename the active scenario using the Name input on the right')+
+      row('Remove','Deletes the current scenario (must always have at least one)')+
+      row('Overrides','In the sidebar under "Cash Flow Settings", set a scenario-specific withdrawal rate, inflation, expenses, or projection years — leave a field blank to inherit the shared value')
+    )}
+
+    ${card('phases','Withdrawal phases',
+      `<div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:10px">Override the withdrawal rate for specific calendar-year windows. Useful for modeling a higher draw during a gap before Social Security starts, or a reduced rate once other income kicks in.</div>`+
+      row('From year','First calendar year the phase applies','80px')+
+      row('Last year','Last year the phase applies, inclusive — leave blank for open-ended','80px')+
+      row('Rate','Withdrawal rate for this window — leave blank to inherit the shared default','80px')+
+      tip('<strong>Example:</strong> Draw 7% from 2026–2030 while waiting for Social Security, then 4.5% from 2031 onward. Phases are matched in order — the first phase whose date range contains the year wins. Each scenario has its own set of phases.')
+    )}
+
+    ${card('rule55','Rule of 55',
+      `<div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:12px">If you leave your employer in or after the calendar year you turn 55, you can take penalty-free withdrawals from that employer's 401k before age 59½ — avoiding the usual 10% early withdrawal penalty. This tool was built specifically to model this window.</div>`+
+      subhd('How to configure it')+
+      row('401k at retirement','The balance available to draw from between retirement and age 59½ under the Rule of 55','140px')+
+      row('All accounts at 59½','Your full 401k + IRA + other retirement accounts once you can access everything penalty-free','140px')+
+      `<div style="margin-top:4px"></div>`+
+      tip('The Rule of 55 applies only to the <em>current</em> employer\'s 401k — IRAs and prior-employer plans are not eligible without a rollover strategy. The tool automatically switches to the full account balance in the year you reach 59½. Consult a tax advisor for your specific situation.','#5a3800','#FDF0DC','#EF9F27')
+    )}
+
+    ${card('tips','Tips & notes',
+      `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${[['Export / Import','Use the Export JSON / Import JSON buttons at the sidebar footer to save and restore your full session — profile, all scenarios, and Monte Carlo settings — as a single file.'],['Auto-save','Your data saves automatically after every change and persists between browser sessions on the same device via localStorage.'],['Clear All Data','Wipes all saved state and resets the app to factory defaults. Useful for starting fresh or sharing the file with someone new.'],['Not financial advice','All projections are for planning discussions only. Calculations are simplified models — consult a licensed financial planner for decisions.']].map(([k,v])=>`<div style="background:#F8F7F2;border-radius:6px;padding:10px 12px"><div style="font-size:11px;font-weight:600;color:#2A2825;margin-bottom:4px">${k}</div><div style="font-size:12px;color:#666;line-height:1.5">${v}</div></div>`).join('')}</div>`
+    )}
+  `;
+}
 
 function mobSwitch(which) {
   const sb = document.querySelector('.sidebar');
