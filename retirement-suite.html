@@ -297,7 +297,7 @@ function switchTool(t) {
   document.getElementById('sb-tab-'+t).classList.add('active');
   renderSidebar();
   if (t === 'budget') renderBudgetMain();
-  if (t === 'guide') renderGuide();
+  if (t === 'guide') { renderGuide(); mobShowResults(); }
 }
 
 /* ═══════════════════════════════════════════════
